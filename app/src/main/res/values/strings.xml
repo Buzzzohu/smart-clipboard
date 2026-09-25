@@ -49,4 +49,17 @@
     <string name="qq_experiment_waiting">开关已打开；还需在系统无障碍设置启用 Smart Clipboard 服务。</string>
     <string name="qq_experiment_inactive">实验功能已关闭，不会读取 QQ 输入。</string>
     <string name="qq_accessibility_settings">打开无障碍设置</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_description">输入联想</string>
+    <string name="back">返回</string>
+    <string name="open_filters">打开分类与筛选</string>
+    <string name="filter_title">分类与筛选</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_favorites">只看收藏</string>
+    <string name="filter_current">当前：%1$s</string>
+    <string name="import_action">导入</string>
+    <string name="import_method_title">选择导入方式</string>
+    <string name="view_full_content">查看全文</string>
+    <string name="close">关闭</string>
+    <string name="content_detail_title">完整内容</string>
 </resources>

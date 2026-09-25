@@ -12,20 +12,22 @@ interface ClipboardItemDao {
     /** instr searches for literal substrings, so %, _ and Chinese text work as entered. */
     @Query("""
         SELECT * FROM ClipboardItem
-        WHERE :query = ''
-           OR instr(lower(content), lower(:query)) > 0
-           OR instr(lower(category), lower(:query)) > 0
-           OR instr(lower(tags), lower(:query)) > 0
-        ORDER BY favorite DESC, updatedTime DESC, id DESC
+        WHERE (:category IS NULL OR category = :category)
+          AND (:favoritesOnly = 0 OR favorite = 1)
+          AND (:query = ''
+            OR instr(lower(content), lower(:query)) > 0
+            OR instr(lower(category), lower(:query)) > 0
+            OR instr(lower(tags), lower(:query)) > 0)
+        ORDER BY updatedTime DESC, id DESC
     """)
-    fun observeSearch(query: String): Flow<List<ClipboardItem>>
+    fun observeSearch(query: String, category: String?, favoritesOnly: Boolean): Flow<List<ClipboardItem>>
 
-    /** A small, ordered candidate set keeps cross-app typing queries cheap. */
+    /** Bound cross-app queries so the scrollable candidate list stays responsive. */
     @Query("""
         SELECT * FROM ClipboardItem
         WHERE instr(lower(content), lower(:query)) > 0
-        ORDER BY favorite DESC, useCount DESC, updatedTime DESC
-        LIMIT 3
+        ORDER BY favorite DESC, lastUsedTime DESC, updatedTime DESC
+        LIMIT 20
     """)
     suspend fun findSuggestions(query: String): List<ClipboardItem>
 
@@ -48,10 +50,10 @@ interface ClipboardItemDao {
     @Query("DELETE FROM ClipboardItem WHERE id = :id")
     suspend fun deleteById(id: Long): Int
 
-    @Query("UPDATE ClipboardItem SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END, updatedTime = :time WHERE id = :id")
-    suspend fun toggleFavorite(id: Long, time: Long): Int
+    @Query("UPDATE ClipboardItem SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
+    suspend fun toggleFavorite(id: Long): Int
 
-    @Query("UPDATE ClipboardItem SET useCount = useCount + 1, updatedTime = :time WHERE id = :id")
+    @Query("UPDATE ClipboardItem SET useCount = useCount + 1, lastUsedTime = :time WHERE id = :id")
     suspend fun recordUse(id: Long, time: Long): Int
 
     @Query("SELECT * FROM ClipboardItem WHERE category = '文本'")

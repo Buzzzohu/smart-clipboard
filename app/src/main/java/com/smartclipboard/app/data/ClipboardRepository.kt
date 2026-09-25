@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 /** Keeps persistence rules out of the screen and ViewModel. */
 class ClipboardRepository(private val dao: ClipboardItemDao) {
-    fun observeSearch(query: String): Flow<List<ClipboardItem>> = dao.observeSearch(query.trim())
+    fun observeSearch(query: String, category: String?, favoritesOnly: Boolean): Flow<List<ClipboardItem>> =
+        dao.observeSearch(query.trim(), category, favoritesOnly)
 
     suspend fun findSuggestions(query: String): List<ClipboardItem> =
         if (query.isBlank()) emptyList() else dao.findSuggestions(query.trim())
@@ -59,11 +60,9 @@ class ClipboardRepository(private val dao: ClipboardItemDao) {
 
     suspend fun delete(id: Long): Boolean = dao.deleteById(id) > 0
 
-    suspend fun toggleFavorite(id: Long): Boolean =
-        dao.toggleFavorite(id, System.currentTimeMillis()) > 0
+    suspend fun toggleFavorite(id: Long): Boolean = dao.toggleFavorite(id) > 0
 
-    suspend fun recordUse(id: Long): Boolean =
-        dao.recordUse(id, System.currentTimeMillis()) > 0
+    suspend fun recordUse(id: Long): Boolean = dao.recordUse(id, System.currentTimeMillis()) > 0
 
     /** Updates entries saved before automatic classification was introduced. */
     suspend fun reclassifyExisting() {

@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ClipboardDatabase
 import com.smartclipboard.app.data.ClipboardItem
 import com.smartclipboard.app.data.ClipboardRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,10 +34,20 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     val state = mutableState.asStateFlow()
     private val mutableQuery = MutableStateFlow("")
     val query = mutableQuery.asStateFlow()
-    val items = mutableQuery.flatMapLatest(repository::observeSearch)
+    private val mutableCategory = MutableStateFlow<String?>(null)
+    val category = mutableCategory.asStateFlow()
+    private val mutableFavoritesOnly = MutableStateFlow(false)
+    val favoritesOnly = mutableFavoritesOnly.asStateFlow()
+    val items = combine(mutableQuery, mutableCategory, mutableFavoritesOnly) { query, category, favorites ->
+        Triple(query, category, favorites)
+    }.flatMapLatest { (query, category, favorites) ->
+        repository.observeSearch(query, category, favorites)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val mutableMessages = MutableSharedFlow<LibraryMessage>(extraBufferCapacity = 1)
     val messages = mutableMessages.asSharedFlow()
+    private val mutableNotices = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val notices = mutableNotices.asSharedFlow()
 
     private var lastHandledContent: String? = null
     private var readVersion = 0
@@ -51,19 +63,19 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         if ((mutableState.value as? ClipboardStatus.Candidate)?.isSaving == true) return
         val version = ++readVersion
         when (val result = ClipboardImportPolicy.evaluate(reader.read())) {
-            ClipboardImportResult.Empty -> mutableState.value = ClipboardStatus.Empty
-            ClipboardImportResult.Ignored -> mutableState.value = ClipboardStatus.SkippedByPolicy
+            ClipboardImportResult.Empty -> updateStatus(ClipboardStatus.Empty, R.string.clipboard_empty)
+            ClipboardImportResult.Ignored -> updateStatus(ClipboardStatus.SkippedByPolicy, R.string.clipboard_ignored_by_rule)
             is ClipboardImportResult.Candidate -> viewModelScope.launch {
                 try {
                     val exists = repository.contains(result.content)
                     if (version != readVersion) return@launch
-                    mutableState.value = when {
-                        exists -> ClipboardStatus.AlreadySaved(result.content)
-                        lastHandledContent == result.content -> ClipboardStatus.IgnoredByUser(result.content)
-                        else -> ClipboardStatus.Candidate(result.content)
+                    when {
+                        exists -> updateStatus(ClipboardStatus.AlreadySaved(result.content), R.string.clipboard_already_saved)
+                        lastHandledContent == result.content -> mutableState.value = ClipboardStatus.IgnoredByUser(result.content)
+                        else -> mutableState.value = ClipboardStatus.Candidate(result.content)
                     }
                 } catch (_: Exception) {
-                    if (version == readVersion) mutableState.value = ClipboardStatus.ReadFailed
+                    if (version == readVersion) updateStatus(ClipboardStatus.ReadFailed, R.string.clipboard_read_failed)
                 }
             }
         }
@@ -73,10 +85,23 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         mutableQuery.value = value
     }
 
+    fun setCategory(value: String?) {
+        mutableCategory.value = value
+    }
+
+    fun setFavoritesOnly(value: Boolean) {
+        mutableFavoritesOnly.value = value
+    }
+
+    private fun updateStatus(status: ClipboardStatus, noticeRes: Int) {
+        mutableState.value = status
+        mutableNotices.tryEmit(noticeRes)
+    }
+
     fun ignore() {
         val candidate = mutableState.value as? ClipboardStatus.Candidate ?: return
         lastHandledContent = candidate.content
-        mutableState.value = ClipboardStatus.IgnoredByUser(candidate.content)
+        updateStatus(ClipboardStatus.IgnoredByUser(candidate.content), R.string.clipboard_ignored_by_user)
     }
 
     fun save() {
@@ -90,14 +115,11 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val inserted = repository.save(content)
                 lastHandledContent = content
                 if (version == readVersion) {
-                    mutableState.value = if (inserted) {
-                        ClipboardStatus.Saved(content)
-                    } else {
-                        ClipboardStatus.AlreadySaved(content)
-                    }
+                    if (inserted) updateStatus(ClipboardStatus.Saved(content), R.string.clipboard_saved)
+                    else updateStatus(ClipboardStatus.AlreadySaved(content), R.string.clipboard_already_saved)
                 }
             } catch (_: Exception) {
-                if (version == readVersion) mutableState.value = ClipboardStatus.SaveFailed(content)
+                if (version == readVersion) updateStatus(ClipboardStatus.SaveFailed(content), R.string.clipboard_save_failed)
             }
         }
     }

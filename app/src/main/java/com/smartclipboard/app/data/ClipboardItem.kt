@@ -1,5 +1,6 @@
 package com.smartclipboard.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -14,5 +15,6 @@ data class ClipboardItem(
     val category: String = "文本",
     val tags: String = "",
     val favorite: Boolean = false,
-    val useCount: Int = 0
+    val useCount: Int = 0,
+    @ColumnInfo(defaultValue = "0") val lastUsedTime: Long = 0
 )
