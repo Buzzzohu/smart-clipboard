@@ -1,18 +1,19 @@
 package com.smartclipboard.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,18 +31,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ClipboardItem
 import java.text.DateFormat
 import java.util.Date
-import kotlin.math.roundToInt
 
 /** Only one row is revealed at a time; the host owns that shared state. */
 @Composable
@@ -57,55 +55,23 @@ fun ClipboardItemCard(
     onFavorite: () -> Unit,
     onExpand: () -> Unit
 ) {
-    val actionWidth = 256.dp
-    val actionWidthPx = with(LocalDensity.current) { actionWidth.toPx() }
-    val settledOffset by animateFloatAsState(if (revealed) -actionWidthPx else 0f, label = "card swipe")
-    var dragOffset by remember(item.id) { mutableFloatStateOf(0f) }
-    val offsetPx = (settledOffset + dragOffset).coerceIn(-actionWidthPx, 0f)
+    val gestureThreshold = with(LocalDensity.current) { 52.dp.toPx() }
+    var draggedBy by remember(item.id) { mutableFloatStateOf(0f) }
 
-    Box(Modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier.matchParentSize(),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                CardAction(stringResource(R.string.copy_item), MaterialTheme.colorScheme.primary, {
-                    onCopy(); onClose()
-                })
-                CardAction(stringResource(R.string.edit_item), MaterialTheme.colorScheme.primary, {
-                    onEdit(); onClose()
-                })
-                CardAction(
-                    stringResource(if (item.favorite) R.string.unfavorite_item else R.string.favorite_item),
-                    MaterialTheme.colorScheme.primary,
-                    { onFavorite(); onClose() }
-                )
-                CardAction(stringResource(R.string.delete_item), MaterialTheme.colorScheme.error, {
-                    onDelete(); onClose()
-                })
-            }
-        }
+    Column(Modifier.fillMaxWidth()) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(offsetPx.roundToInt(), 0) }
                 .pointerInput(item.id, revealed) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
-                            val enough = actionWidthPx * 0.3f
-                            if (revealed) {
-                                if (dragOffset > enough) onClose() else onReveal()
-                            } else {
-                                if (dragOffset < -enough) onReveal() else onClose()
-                            }
-                            dragOffset = 0f
+                            if (draggedBy < -gestureThreshold) onReveal()
+                            if (draggedBy > gestureThreshold) onClose()
+                            draggedBy = 0f
                         },
+                        onDragCancel = { draggedBy = 0f },
                         onHorizontalDrag = { change, distance ->
-                            dragOffset = (dragOffset + distance).coerceIn(
-                                if (revealed) 0f else -actionWidthPx,
-                                if (revealed) actionWidthPx else 0f
-                            )
+                            draggedBy += distance
                             change.consume()
                         }
                     )
@@ -140,17 +106,51 @@ fun ClipboardItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        AnimatedVisibility(
+            visible = revealed,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.large,
+                tonalElevation = 2.dp
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    CardAction(stringResource(R.string.copy_item), false) { onCopy(); onClose() }
+                    CardAction(stringResource(R.string.edit_item), false) { onEdit(); onClose() }
+                    CardAction(stringResource(if (item.favorite) R.string.unfavorite_item else R.string.favorite_item), false) {
+                        onFavorite(); onClose()
+                    }
+                    CardAction(stringResource(R.string.delete_item), true) { onDelete(); onClose() }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun CardAction(label: String, color: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.width(64.dp).fillMaxHeight().clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+private fun androidx.compose.foundation.layout.RowScope.CardAction(
+    label: String,
+    destructive: Boolean,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
     ) {
-        Text(label, color = color, style = MaterialTheme.typography.labelMedium,
-            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

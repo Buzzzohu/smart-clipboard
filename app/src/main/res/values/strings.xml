@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">Smart Clipboard</string>
     <string name="import_instruction">复制文本后打开应用，或点击按钮读取当前剪贴板。</string>
-    <string name="clipboard_empty">剪贴板中没有可导入的文本。</string>
     <string name="clipboard_ignored_by_rule">纯数字或英文字母内容已自动忽略。</string>
     <string name="clipboard_read_failed">读取失败，请保持应用在前台后重试。</string>
     <string name="clipboard_found">发现新的剪贴板内容</string>

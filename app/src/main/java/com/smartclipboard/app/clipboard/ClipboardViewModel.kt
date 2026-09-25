@@ -63,7 +63,8 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         if ((mutableState.value as? ClipboardStatus.Candidate)?.isSaving == true) return
         val version = ++readVersion
         when (val result = ClipboardImportPolicy.evaluate(reader.read())) {
-            ClipboardImportResult.Empty -> updateStatus(ClipboardStatus.Empty, R.string.clipboard_empty)
+            // An empty clipboard is normal on app launch; keep the library quiet.
+            ClipboardImportResult.Empty -> mutableState.value = ClipboardStatus.Empty
             ClipboardImportResult.Ignored -> updateStatus(ClipboardStatus.SkippedByPolicy, R.string.clipboard_ignored_by_rule)
             is ClipboardImportResult.Candidate -> viewModelScope.launch {
                 try {
