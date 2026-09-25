@@ -42,11 +42,11 @@
     <string name="batch_import_hint">把多条内容粘贴在下方，每行保存为一条。空行和重复内容会跳过。</string>
     <string name="batch_import_label">每行一条内容</string>
     <string name="batch_import_result">已导入 %1$d 条，跳过 %2$d 条。</string>
-    <string name="qq_service_name">Smart Clipboard · QQ 输入联想</string>
-    <string name="qq_service_description">仅在 QQ 的可编辑输入框中读取当前输入，用本地剪贴板库显示补全候选；不会记录或上传输入内容。可随时关闭。</string>
-    <string name="qq_experiment_title">QQ 输入联想（实验）</string>
-    <string name="qq_experiment_active">已开启。在 QQ 输入至少 2 个字后，匹配项会显示在键盘上方。</string>
+    <string name="qq_service_name">Smart Clipboard · QQ/微信输入联想</string>
+    <string name="qq_service_description">仅在 QQ 或微信的可编辑输入框中读取当前输入，用本地剪贴板库显示补全候选；不会记录或上传输入内容。可随时关闭。</string>
+    <string name="qq_experiment_title">QQ / 微信输入联想（实验）</string>
+    <string name="qq_experiment_active">已开启。在 QQ 或微信输入至少 2 个字后，匹配项会显示在键盘上方。</string>
     <string name="qq_experiment_waiting">开关已打开；还需在系统无障碍设置启用 Smart Clipboard 服务。</string>
-    <string name="qq_experiment_inactive">实验功能已关闭，不会读取 QQ 输入。</string>
+    <string name="qq_experiment_inactive">实验功能已关闭，不会读取 QQ 或微信输入。</string>
     <string name="qq_accessibility_settings">打开无障碍设置</string>
 </resources>

@@ -22,7 +22,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Optional, QQ-only experiment. Typed text is queried locally and never stored or logged. */
+/** Optional QQ/WeChat experiment. Typed text is queried locally and never stored or logged. */
 class QqSuggestionService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val repository by lazy {
@@ -32,7 +32,9 @@ class QqSuggestionService : AccessibilityService() {
     private var queryJob: Job? = null
     private var strip: LinearLayout? = null
     private var currentQuery = ""
-    private val qqPackage = "com.tencent.mobileqq"
+    private var currentPackage: String? = null
+    // Keep this service component name stable so existing Android accessibility approval survives upgrades.
+    private val supportedPackages = setOf("com.tencent.mobileqq", "com.tencent.mm")
     private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         if (!QqSuggestionSettings.isEnabled(this)) hideStrip()
     }
@@ -47,10 +49,10 @@ class QqSuggestionService : AccessibilityService() {
             hideStrip()
             return
         }
-        if (event.packageName?.toString() != qqPackage) {
-            // Keyboard and our own overlay emit window events while QQ still owns input.
-            // Keep the strip until the foreground root actually moves away from QQ.
-            if (rootInActiveWindow?.packageName?.toString() != qqPackage) hideStrip()
+        val eventPackage = event.packageName?.toString()
+        if (eventPackage == null || eventPackage !in supportedPackages) {
+            // Keyboard and our overlay emit events while a supported app still owns input.
+            if (rootInActiveWindow?.packageName?.toString() !in supportedPackages) hideStrip()
             return
         }
         if (event.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED &&
@@ -60,7 +62,7 @@ class QqSuggestionService : AccessibilityService() {
 
         // Only the focused editable node is examined. Password fields are excluded.
         val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (node == null || node.packageName?.toString() != qqPackage ||
+        if (node == null || node.packageName?.toString() != eventPackage ||
             !node.isEditable || node.isPassword || !node.isFocused) {
             hideStrip()
             return
@@ -71,25 +73,27 @@ class QqSuggestionService : AccessibilityService() {
             return
         }
         currentQuery = typed
+        currentPackage = eventPackage
         queryJob?.cancel()
         queryJob = scope.launch {
             delay(180) // Wait for the IME to finish a burst of edits.
             val suggestions = runCatching { repository.findSuggestions(typed) }
                 .getOrDefault(emptyList())
                 .filter { it.content != typed }
-            if (currentQuery == typed && focusedText() == typed) {
-                showSuggestions(typed, suggestions)
+            if (currentQuery == typed && currentPackage == eventPackage &&
+                focusedText(eventPackage) == typed) {
+                showSuggestions(eventPackage, typed, suggestions)
             }
         }
     }
 
-    private fun focusedText(): String? {
+    private fun focusedText(packageName: String): String? {
         val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        return if (node?.packageName?.toString() == qqPackage && node.isEditable &&
+        return if (node?.packageName?.toString() == packageName && node.isEditable &&
             !node.isPassword && node.isFocused) node.text?.toString()?.trim() else null
     }
 
-    private fun showSuggestions(query: String, suggestions: List<ClipboardItem>) {
+    private fun showSuggestions(packageName: String, query: String, suggestions: List<ClipboardItem>) {
         hideStripView()
         if (suggestions.isEmpty()) return
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } ?: return
@@ -117,7 +121,7 @@ class QqSuggestionService : AccessibilityService() {
                 setPadding(dp(12), 0, dp(12), 0)
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setOnClickListener { applySuggestion(query, item) }
+                setOnClickListener { applySuggestion(packageName, query, item) }
             }, LinearLayout.LayoutParams(-1, rowHeight))
         }
         val params = WindowManager.LayoutParams(
@@ -138,8 +142,9 @@ class QqSuggestionService : AccessibilityService() {
         }
     }
 
-    private fun applySuggestion(query: String, item: ClipboardItem) {
-        if (currentQuery != query || focusedText() != query) {
+    private fun applySuggestion(packageName: String, query: String, item: ClipboardItem) {
+        if (currentQuery != query || currentPackage != packageName ||
+            focusedText(packageName) != query) {
             hideStrip()
             return
         }
@@ -156,6 +161,7 @@ class QqSuggestionService : AccessibilityService() {
     private fun hideStrip() {
         queryJob?.cancel()
         currentQuery = ""
+        currentPackage = null
         hideStripView()
     }
 
