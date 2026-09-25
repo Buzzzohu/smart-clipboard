@@ -1,0 +1,17 @@
+/.gradle/
+/.kotlin/
+/.idea/
+/build/
+/app/build/
+/local.properties
+/local-sdk/
+/.sdk-download/
+/.adb-download/
+/.android-debug/
+/.android/
+/.adb-home/
+*.apk
+*.keystore
+*.jks
+key.properties
+*.iml
