@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Keep the clipboard inside the adaptive icon's safe area. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,31 C33.7,31 31,33.7 31,37 L31,77 C31,80.3 33.7,83 37,83 L71,83 C74.3,83 77,80.3 77,77 L77,37 C77,33.7 74.3,31 71,31 L37,31 Z" />
+    <path
+        android:fillColor="#D8E8FF"
+        android:pathData="M47,27 L49,27 C49.8,24.1 51.5,22 54,22 C56.5,22 58.2,24.1 59,27 L61,27 C63.2,27 65,28.8 65,31 L65,35 C65,37.2 63.2,39 61,39 L47,39 C44.8,39 43,37.2 43,35 L43,31 C43,28.8 44.8,27 47,27 Z" />
+    <path
+        android:fillColor="#1769D2"
+        android:pathData="M42,48 L66,48 L66,52 L42,52 Z M42,58 L66,58 L66,62 L42,62 Z M42,68 L59,68 L59,72 L42,72 Z" />
+    <path
+        android:fillColor="#32CDB8"
+        android:pathData="M65,67 L68,67 L68,70 L71,70 L71,73 L68,73 L68,76 L65,76 L65,73 L62,73 L62,70 L65,70 Z" />
+</vector>
