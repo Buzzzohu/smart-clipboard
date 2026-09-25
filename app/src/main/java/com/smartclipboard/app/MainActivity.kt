@@ -21,6 +21,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) viewModel.refresh()
+        if (hasFocus) viewModel.refresh(passive = true)
     }
 }

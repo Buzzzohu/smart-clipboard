@@ -96,7 +96,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     }
     LaunchedEffect(notice?.id) {
         if (notice != null) {
-            delay(4_000)
+            delay(2_000)
             notice = null
         }
     }
@@ -202,6 +202,12 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                             }, modifier = Modifier.weight(1f)) {
                                 Text(stringResource(R.string.add_manually))
                             }
+                        }
+                        TextButton(onClick = {
+                            revealedId = null
+                            showBatchEntry = true
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.batch_import_button))
                         }
                         Spacer(Modifier.height(18.dp))
                         Text(stringResource(R.string.saved_count, entries.size),
