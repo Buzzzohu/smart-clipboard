@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.smartclipboard.app.R
 import com.smartclipboard.app.classification.ClipboardCategory
 
-/** Right edge gesture keeps list-card swipes independent of library filtering. */
+/** Left edge gesture keeps list-card swipes independent of library filtering. */
 @Composable
 fun BoxScope.FilterSidebar(
     visible: Boolean,
@@ -59,11 +59,11 @@ fun BoxScope.FilterSidebar(
     if (!visible) {
         // The 20 dp edge zone does not cover the cards' visible content.
         Box(
-            Modifier.align(Alignment.CenterEnd).width(20.dp).fillMaxHeight()
+            Modifier.align(Alignment.CenterStart).width(20.dp).fillMaxHeight()
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { draggedBy = 0f },
-                        onDragEnd = { if (draggedBy < -threshold) onOpen() },
+                        onDragEnd = { if (draggedBy > threshold) onOpen() },
                         onHorizontalDrag = { change, distance ->
                             draggedBy += distance
                             change.consume()
@@ -83,23 +83,23 @@ fun BoxScope.FilterSidebar(
 
     AnimatedVisibility(
         visible = visible,
-        modifier = Modifier.align(Alignment.CenterEnd),
-        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-        exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+        modifier = Modifier.align(Alignment.CenterStart),
+        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+        exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
     ) {
         Surface(
             modifier = Modifier.width(width).fillMaxHeight()
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { draggedBy = 0f },
-                        onDragEnd = { if (draggedBy > threshold) onClose() },
+                        onDragEnd = { if (draggedBy < -threshold) onClose() },
                         onHorizontalDrag = { change, distance ->
                             draggedBy += distance
                             change.consume()
                         }
                     )
                 },
-            shape = RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp),
+            shape = RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp),
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 12.dp
         ) {

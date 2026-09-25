@@ -133,19 +133,11 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                             Modifier.padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelMedium)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = {
-                                revealedId = null
-                                viewModel.refresh()
-                            }, modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.refresh_clipboard))
-                            }
-                            TextButton(onClick = {
-                                revealedId = null
-                                showManualSheet = true
-                            }, modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.add_manually))
-                            }
+                        Button(onClick = {
+                            revealedId = null
+                            showManualSheet = true
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.add_manually))
                         }
                         Spacer(Modifier.height(18.dp))
                         Text(stringResource(R.string.saved_count, entries.size),
