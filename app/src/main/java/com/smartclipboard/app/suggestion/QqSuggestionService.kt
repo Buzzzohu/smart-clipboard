@@ -22,7 +22,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Optional QQ/WeChat experiment. Typed text is queried locally and never stored or logged. */
+/** Optional QQ experiment. Typed text is queried locally and never stored or logged. */
 class QqSuggestionService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val repository by lazy {
@@ -34,7 +34,7 @@ class QqSuggestionService : AccessibilityService() {
     private var currentQuery = ""
     private var currentPackage: String? = null
     // Keep this service component name stable so existing Android accessibility approval survives upgrades.
-    private val supportedPackages = setOf("com.tencent.mobileqq", "com.tencent.mm")
+    private val supportedPackages = setOf("com.tencent.mobileqq")
     private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         if (!QqSuggestionSettings.isEnabled(this)) hideStrip()
     }
@@ -59,15 +59,7 @@ class QqSuggestionService : AccessibilityService() {
             event.eventType != AccessibilityEvent.TYPE_VIEW_FOCUSED &&
             event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
             event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return
-
-        // Only the focused editable node is examined. Password fields are excluded.
-        val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (node == null || node.packageName?.toString() != eventPackage ||
-            !node.isEditable || node.isPassword || !node.isFocused) {
-            hideStrip()
-            return
-        }
-        val typed = node.text?.toString()?.trim().orEmpty()
+        val typed = focusedText(eventPackage).orEmpty()
         if (typed.length < 2 || typed.length > 40 || typed.contains('\n')) {
             hideStrip()
             return
@@ -96,7 +88,8 @@ class QqSuggestionService : AccessibilityService() {
     private fun showSuggestions(packageName: String, query: String, suggestions: List<ClipboardItem>) {
         hideStripView()
         if (suggestions.isEmpty()) return
-        val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } ?: return
+        val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        if (ime == null) return
         val bounds = Rect().also(ime::getBoundsInScreen)
         val rowHeight = dp(44)
         val height = suggestions.size * rowHeight + dp(8)

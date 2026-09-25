@@ -13,8 +13,8 @@ android {
         applicationId = "com.smartclipboard.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.6.0-experiment"
+        versionCode = 8
+        versionName = "0.7.0-qq-only"
     }
 
     buildTypes {
