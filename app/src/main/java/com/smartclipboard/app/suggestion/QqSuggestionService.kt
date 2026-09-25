@@ -1,7 +1,6 @@
 package com.smartclipboard.app.suggestion
 
 import android.accessibilityservice.AccessibilityService
-import android.content.res.Configuration
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -107,23 +106,21 @@ class QqSuggestionService : AccessibilityService() {
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
         if (ime == null) return
         val bounds = Rect().also(ime::getBoundsInScreen)
-        val rowHeight = dp(48)
+        val rowHeight = dp(44)
         val height = minOf(suggestions.size, 3) * rowHeight + dp(8)
         if (bounds.top <= height + dp(8)) return
-        val dark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-            Configuration.UI_MODE_NIGHT_YES
-        val backgroundColor = if (dark) 0xD9252B36.toInt() else 0xD9F7F8FC.toInt()
-        val borderColor = if (dark) 0xCC8B9AB1.toInt() else 0xCC92A4BF.toInt()
-        val textColor = if (dark) 0xFFF0F4FC.toInt() else 0xFF1A1D24.toInt()
-        val accentColor = if (dark) 0xFF9FC4FF.toInt() else 0xFF1769D2.toInt()
+        val backgroundColor = 0xFFF7F8FC.toInt()
+        val borderColor = 0xFFCCD2DD.toInt()
+        val textColor = 0xFF1A1D24.toInt()
+        val accentColor = 0xFF1769D2.toInt()
 
         val panel = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 setColor(backgroundColor)
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), borderColor)
             }
-            elevation = dp(5).toFloat()
+            elevation = dp(8).toFloat()
         }
         val rows = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -135,6 +132,7 @@ class QqSuggestionService : AccessibilityService() {
             val start = if (match > 12) match - 12 else 0
             val end = minOf(full.length, start + 80)
             val preview = buildString {
+                append("📋 ")
                 if (item.favorite) append("★ ")
                 if (start > 0) append("…")
                 append(full.substring(start, end))
@@ -178,14 +176,14 @@ class QqSuggestionService : AccessibilityService() {
             }
         }, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END))
         val params = WindowManager.LayoutParams(
-            resources.displayMetrics.widthPixels - dp(16),
+            WindowManager.LayoutParams.MATCH_PARENT,
             height,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.TOP
             y = bounds.top - height - dp(6)
             x = 0
         }

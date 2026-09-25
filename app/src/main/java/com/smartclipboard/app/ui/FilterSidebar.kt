@@ -52,7 +52,7 @@ fun BoxScope.FilterSidebar(
     onCategory: (String?) -> Unit,
     onFavorites: () -> Unit
 ) {
-    val width = (LocalConfiguration.current.screenWidthDp / 3).dp
+    val width = (LocalConfiguration.current.screenWidthDp / 2).dp
     val threshold = with(LocalDensity.current) { 42.dp.toPx() }
     var draggedBy by remember { mutableFloatStateOf(0f) }
 
@@ -100,7 +100,7 @@ fun BoxScope.FilterSidebar(
                     )
                 },
             shape = RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
             shadowElevation = 12.dp
         ) {
             Column(Modifier.fillMaxSize().padding(horizontal = 6.dp)) {
@@ -129,8 +129,8 @@ private fun FilterOption(label: String, selected: Boolean, onClick: () -> Unit) 
     Box(
         Modifier.fillMaxWidth().padding(vertical = 2.dp)
             .clip(MaterialTheme.shapes.small)
-            .background(if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.88f)
+                else MaterialTheme.colorScheme.surface.copy(alpha = 0.12f))
             .clickable(onClick = onClick)
             .padding(horizontal = 9.dp, vertical = 11.dp)
     ) {
