@@ -112,18 +112,18 @@ class QqSuggestionService : AccessibilityService() {
         if (bounds.top <= height + dp(8)) return
         val dark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
             Configuration.UI_MODE_NIGHT_YES
-        val backgroundColor = if (dark) 0xFF252B36.toInt() else 0xFFF7F8FC.toInt()
-        val borderColor = if (dark) 0xFF566173.toInt() else 0xFFCCD2DD.toInt()
+        val backgroundColor = if (dark) 0xD9252B36.toInt() else 0xD9F7F8FC.toInt()
+        val borderColor = if (dark) 0xCC8B9AB1.toInt() else 0xCC92A4BF.toInt()
         val textColor = if (dark) 0xFFF0F4FC.toInt() else 0xFF1A1D24.toInt()
         val accentColor = if (dark) 0xFF9FC4FF.toInt() else 0xFF1769D2.toInt()
 
         val panel = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 setColor(backgroundColor)
-                cornerRadius = dp(14).toFloat()
+                cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), borderColor)
             }
-            elevation = dp(8).toFloat()
+            elevation = dp(5).toFloat()
         }
         val rows = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -178,14 +178,14 @@ class QqSuggestionService : AccessibilityService() {
             }
         }, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END))
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            resources.displayMetrics.widthPixels - dp(16),
             height,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = bounds.top - height - dp(6)
             x = 0
         }

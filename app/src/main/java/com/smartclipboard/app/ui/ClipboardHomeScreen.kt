@@ -2,7 +2,6 @@ package com.smartclipboard.app.ui
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,28 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartclipboard.app.R
-import com.smartclipboard.app.classification.ClipboardCategory
 import com.smartclipboard.app.clipboard.ClipboardStatus
 import com.smartclipboard.app.clipboard.ClipboardViewModel
 import com.smartclipboard.app.clipboard.LibraryMessage
@@ -70,7 +61,8 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     val favoritesOnly by viewModel.favoritesOnly.collectAsStateWithLifecycle()
 
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    var showImportSheet by rememberSaveable { mutableStateOf(false) }
+    var filterOpen by rememberSaveable { mutableStateOf(false) }
+    var showManualSheet by rememberSaveable { mutableStateOf(false) }
     var showManualEntry by rememberSaveable { mutableStateOf(false) }
     var showBatchEntry by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<ClipboardItem?>(null) }
@@ -79,8 +71,6 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     var revealedId by remember { mutableStateOf<Long?>(null) }
     var notice by remember { mutableStateOf<Notice?>(null) }
     var noticeId by remember { mutableLongStateOf(0L) }
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(viewModel) {
         launch {
@@ -104,54 +94,8 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     if (showSettings) {
         SettingsScreen(onBack = { showSettings = false })
     } else {
-        BackHandler(drawerState.isOpen) { scope.launch { drawerState.close() } }
+        BackHandler(filterOpen) { filterOpen = false }
         Box(Modifier.fillMaxSize()) {
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet {
-                        Spacer(Modifier.height(24.dp))
-                        Text(stringResource(R.string.filter_title),
-                            Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.titleLarge)
-                        HorizontalDivider()
-                        NavigationDrawerItem(
-                            label = { Text(stringResource(R.string.filter_all)) },
-                            selected = category == null,
-                            onClick = {
-                                viewModel.setCategory(null)
-                                revealedId = null
-                                scope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        )
-                        ClipboardCategory.entries.forEach { option ->
-                            NavigationDrawerItem(
-                                label = { Text(option.label) },
-                                selected = category == option.label,
-                                onClick = {
-                                    viewModel.setCategory(option.label)
-                                    revealedId = null
-                                    scope.launch { drawerState.close() }
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
-                        HorizontalDivider(Modifier.padding(vertical = 12.dp))
-                        NavigationDrawerItem(
-                            label = { Text(stringResource(R.string.filter_favorites)) },
-                            selected = favoritesOnly,
-                            badge = { if (favoritesOnly) Text("✓") },
-                            onClick = {
-                                viewModel.setFavoritesOnly(!favoritesOnly)
-                                revealedId = null
-                                scope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        )
-                    }
-                }
-            ) {
                 Scaffold { padding ->
                     Column(
                         Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
@@ -160,7 +104,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 revealedId = null
-                                scope.launch { drawerState.open() }
+                                filterOpen = true
                             }) { Text("☰", style = MaterialTheme.typography.headlineSmall) }
                             Text(stringResource(R.string.app_name),
                                 modifier = Modifier.weight(1f),
@@ -192,22 +136,16 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = {
                                 revealedId = null
-                                showImportSheet = true
+                                viewModel.refresh()
                             }, modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.import_action))
+                                Text(stringResource(R.string.refresh_clipboard))
                             }
                             TextButton(onClick = {
                                 revealedId = null
-                                showManualEntry = true
+                                showManualSheet = true
                             }, modifier = Modifier.weight(1f)) {
                                 Text(stringResource(R.string.add_manually))
                             }
-                        }
-                        TextButton(onClick = {
-                            revealedId = null
-                            showBatchEntry = true
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.batch_import_button))
                         }
                         Spacer(Modifier.height(18.dp))
                         Text(stringResource(R.string.saved_count, entries.size),
@@ -247,7 +185,6 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                         }
                     }
                 }
-            }
             notice?.let { current ->
                 Surface(
                     modifier = Modifier.align(Alignment.TopCenter)
@@ -260,22 +197,39 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                         style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            FilterSidebar(
+                visible = filterOpen,
+                category = category,
+                favoritesOnly = favoritesOnly,
+                onOpen = { revealedId = null; filterOpen = true },
+                onClose = { filterOpen = false },
+                onCategory = {
+                    viewModel.setCategory(it)
+                    revealedId = null
+                    filterOpen = false
+                },
+                onFavorites = {
+                    viewModel.setFavoritesOnly(!favoritesOnly)
+                    revealedId = null
+                    filterOpen = false
+                }
+            )
         }
 
-        if (showImportSheet) {
-            ModalBottomSheet(onDismissRequest = { showImportSheet = false }) {
+        if (showManualSheet) {
+            ModalBottomSheet(onDismissRequest = { showManualSheet = false }) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-                    Text(stringResource(R.string.import_method_title),
+                    Text(stringResource(R.string.manual_method_title),
                         style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = {
-                        showImportSheet = false
-                        viewModel.refresh()
+                        showManualSheet = false
+                        showManualEntry = true
                     }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.refresh_clipboard))
+                        Text(stringResource(R.string.single_manual_entry))
                     }
                     TextButton(onClick = {
-                        showImportSheet = false
+                        showManualSheet = false
                         showBatchEntry = true
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.batch_import_button))
@@ -289,7 +243,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
         }
         if (showManualEntry) {
             EntryEditorDialog(
-                title = stringResource(R.string.add_manually),
+                title = stringResource(R.string.single_manual_entry),
                 initialContent = "",
                 initialTags = "",
                 onDismiss = { showManualEntry = false },

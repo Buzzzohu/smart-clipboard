@@ -16,7 +16,9 @@
     <string name="expand_content">展开</string>
     <string name="collapse_content">收起</string>
     <string name="search_label">搜索内容、分类或标签</string>
-    <string name="add_manually">手动添加</string>
+    <string name="add_manually">手动导入</string>
+    <string name="single_manual_entry">单条手动添加</string>
+    <string name="manual_method_title">选择手动导入方式</string>
     <string name="saved_count">我的剪贴板 · %1$d 条</string>
     <string name="library_empty">还没有保存的内容。复制文本后返回这里，或手动添加。</string>
     <string name="search_empty">没有找到匹配的内容。</string>
@@ -56,8 +58,6 @@
     <string name="filter_all">全部</string>
     <string name="filter_favorites">只看收藏</string>
     <string name="filter_current">当前：%1$s</string>
-    <string name="import_action">导入</string>
-    <string name="import_method_title">选择导入方式</string>
     <string name="view_full_content">查看全文</string>
     <string name="close">关闭</string>
     <string name="content_detail_title">完整内容</string>
