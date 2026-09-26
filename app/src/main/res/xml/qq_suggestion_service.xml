@@ -5,4 +5,4 @@
     android:accessibilityFlags="flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
     android:canRetrieveWindowContent="true"
     android:description="@string/qq_service_description"
-    android:notificationTimeout="100" />
+    android:notificationTimeout="0" />

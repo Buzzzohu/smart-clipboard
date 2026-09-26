@@ -42,6 +42,8 @@ class QqSuggestionService : AccessibilityService() {
     private var queryJob: Job? = null
     private var strip: FrameLayout? = null
     private var positionJob: Job? = null
+    private var visibilityGate = OverlayVisibilityGate()
+    private var currentEditorWindowId: Int? = null
     private var currentQuery = ""
     private var currentPackage: String? = null
     private var dismissedSuggestion: Pair<String, String>? = null
@@ -106,8 +108,16 @@ class QqSuggestionService : AccessibilityService() {
             return
         }
         dismissedSuggestion = null
+        val editorWindowId = focusedEditor(queryPackage)?.windowId ?: return
+        // Window notifications often repeat while navigating. Do not recreate an
+        // unchanged list or reset an already pending search on every notification.
+        if (currentQuery == query && currentPackage == queryPackage &&
+            currentEditorWindowId == editorWindowId &&
+            (strip != null || queryJob?.isActive == true)) return
+        hideStripView()
         currentQuery = query
         currentPackage = queryPackage
+        currentEditorWindowId = editorWindowId
         queryJob?.cancel()
         queryJob = scope.launch {
             delay(180) // Wait for the IME to finish a burst of edits.
@@ -141,7 +151,9 @@ class QqSuggestionService : AccessibilityService() {
     private fun inputContextValid(packageName: String, query: String): Boolean =
         SuggestionApp.fromPackage(packageName)?.let { SuggestionSettings.isEnabled(this, it) } == true &&
             rootInActiveWindow?.packageName?.toString() == packageName &&
-            keyboardVisible() && focusedText(packageName) == query
+            keyboardVisible() && focusedEditor(packageName)?.let {
+                it.windowId == currentEditorWindowId && it.text?.toString()?.trim() == query
+            } == true
 
     private fun focusedText(packageName: String): String? =
         focusedEditor(packageName)?.text?.toString()?.trim()
@@ -177,6 +189,7 @@ class QqSuggestionService : AccessibilityService() {
         val accentColor = 0xFF1769D2.toInt()
 
         val panel = FrameLayout(this).apply {
+            alpha = 0f
             background = GradientDrawable().apply {
                 setColor(backgroundColor)
                 cornerRadius = dp(14).toFloat()
@@ -261,7 +274,9 @@ class QqSuggestionService : AccessibilityService() {
             y = keyboardAnchor(ime, bounds) - height
             x = 0
             windowAnimations = 0
+            flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         }
+        visibilityGate = OverlayVisibilityGate()
         // Screen coordinates and window coordinates have different origins on
         // some phones. Suppress the first draw until the measured position is
         // corrected; otherwise users see the wrong position for one polling cycle.
@@ -280,7 +295,7 @@ class QqSuggestionService : AccessibilityService() {
             // following their bounds while visible, without recreating the scroll list.
             positionJob = scope.launch {
                 while (strip === panel) {
-                    delay(80)
+                    delay(40)
                     when (SuggestionTrackingPolicy.decide(currentQuery == query,
                         currentPackage == packageName, inputContextValid(packageName, query))) {
                         SuggestionTrackingPolicy.Action.REMOVE_STALE_VIEW -> {
@@ -316,8 +331,17 @@ class QqSuggestionService : AccessibilityService() {
         val nextY = SuggestionPosition.layoutY(
             params.y, location[1], keyboardAnchor(ime, bounds), params.height, 0
         )
-        if (params.y == nextY) return true
+        val settled = visibilityGate.ready(location[1] + nextY - params.y + params.height,
+            android.os.SystemClock.uptimeMillis())
+        val ready = settled && params.y == nextY
+        // Hide before changing geometry. A transparent panel must not intercept
+        // touches intended for the chat or keyboard during navigation.
+        panel.alpha = if (ready) 1f else 0f
+        val flags = if (ready) params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            else params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        if (params.y == nextY && params.flags == flags) return ready
         params.y = nextY
+        params.flags = flags
         runCatching { windowManager.updateViewLayout(panel, params) }
             .onFailure { hideStrip() }
         return false
@@ -367,13 +391,17 @@ class QqSuggestionService : AccessibilityService() {
         queryJob?.cancel()
         currentQuery = ""
         currentPackage = null
+        currentEditorWindowId = null
         hideStripView()
     }
 
     private fun hideStripView() {
         positionJob?.cancel()
         positionJob = null
-        strip?.let { runCatching { windowManager.removeView(it) } }
+        strip?.let {
+            it.alpha = 0f
+            runCatching { windowManager.removeViewImmediate(it) }
+        }
         strip = null
     }
 
