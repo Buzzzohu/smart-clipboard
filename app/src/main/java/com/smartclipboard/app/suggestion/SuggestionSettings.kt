@@ -32,5 +32,7 @@ internal object SuggestionSettings {
     private fun SuggestionApp.preferenceKey(): String = when (this) {
         SuggestionApp.QQ -> KEY_QQ_ENABLED
         SuggestionApp.HEYBOX -> KEY_HEYBOX_ENABLED
+        SuggestionApp.BILIBILI -> "bilibili_enabled"
+        SuggestionApp.DOUYIN -> "douyin_enabled"
     }
 }

@@ -9,7 +9,9 @@ class SuggestionAppTest {
     fun onlyExplicitlySupportedPackagesCanTriggerSuggestions() {
         assertEquals(SuggestionApp.QQ, SuggestionApp.fromPackage("com.tencent.mobileqq"))
         assertEquals(SuggestionApp.HEYBOX, SuggestionApp.fromPackage("com.max.xiaoheihe"))
-        assertNull(SuggestionApp.fromPackage("com.ss.android.ugc.aweme"))
+        assertEquals(SuggestionApp.BILIBILI, SuggestionApp.fromPackage("tv.danmaku.bili"))
+        assertEquals(SuggestionApp.DOUYIN, SuggestionApp.fromPackage("com.ss.android.ugc.aweme"))
+        assertNull(SuggestionApp.fromPackage("com.tencent.mm"))
         assertNull(SuggestionApp.fromPackage(null))
     }
 }

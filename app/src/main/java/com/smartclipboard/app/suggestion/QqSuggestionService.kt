@@ -128,10 +128,22 @@ class QqSuggestionService : AccessibilityService() {
             rootInActiveWindow?.packageName?.toString() == packageName &&
             keyboardVisible() && focusedText(packageName) == query
 
-    private fun focusedText(packageName: String): String? {
-        val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        return if (node?.packageName?.toString() == packageName && node.isEditable &&
-            !node.isPassword && node.isFocused) node.text?.toString()?.trim() else null
+    private fun focusedText(packageName: String): String? =
+        focusedEditor(packageName)?.text?.toString()?.trim()
+
+    private fun focusedEditor(packageName: String): AccessibilityNodeInfo? {
+        if (SuggestionApp.fromPackage(packageName) == null) return null
+        val roots = sequence {
+            rootInActiveWindow?.let { yield(it) }
+            windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && it.isFocused }
+                .forEach { window -> window.root?.let { yield(it) } }
+        }
+        return roots.filter { it.packageName?.toString() == packageName }
+            .mapNotNull { it.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) }
+            .firstOrNull { node ->
+                node.packageName?.toString() == packageName && node.isEditable &&
+                    !node.isPassword && node.isFocused
+            }
     }
 
     private fun showSuggestions(packageName: String, query: String, suggestions: List<ClipboardItem>) {
@@ -233,7 +245,7 @@ class QqSuggestionService : AccessibilityService() {
             hideStrip()
             return
         }
-        val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return
+        val node = focusedEditor(packageName) ?: run { hideStrip(); return }
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, item.content)
         }
