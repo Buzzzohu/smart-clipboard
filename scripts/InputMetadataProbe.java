@@ -29,6 +29,12 @@ public class InputMetadataProbe extends UiAutomatorTestCase {
         automation.setServiceInfo(info);
         sleep(400);
         for (AccessibilityWindowInfo window : automation.getWindows()) {
+            if (window.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
+                android.graphics.Rect bounds = new android.graphics.Rect();
+                window.getBoundsInScreen(bounds);
+                System.out.println("IME windowBounds=" + bounds);
+                geometry(window.getRoot(), 0);
+            }
             if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
             AccessibilityNodeInfo root = window.getRoot();
             if (root == null) continue;
@@ -38,6 +44,15 @@ public class InputMetadataProbe extends UiAutomatorTestCase {
                     + " focused=" + window.isFocused());
             visit(root, "", 0);
         }
+    }
+
+    private void geometry(AccessibilityNodeInfo node, int depth) {
+        if (node == null || depth > 12) return;
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        node.getBoundsInScreen(bounds);
+        System.out.println("IME depth=" + depth + " class=" + node.getClassName()
+                + " bounds=" + bounds + " visible=" + node.isVisibleToUser());
+        for (int i = 0; i < node.getChildCount(); i++) geometry(node.getChild(i), depth + 1);
     }
 
     private void visit(AccessibilityNodeInfo node, String ancestors, int depth) {

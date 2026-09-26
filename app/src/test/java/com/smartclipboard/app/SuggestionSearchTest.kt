@@ -9,6 +9,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SuggestionSearchTest {
+    @Test fun userFiveCharacterExampleMatchesLongRepeatedEntry() = runBlocking {
+        val content = "真拿你没办法坐好喽 " + "站起来 坐好喽 ".repeat(80)
+        val search = SuggestionSearch({ emptyList() }, { after, _ ->
+            if (after == 0L) listOf(item(1, content)) else emptyList()
+        })
+        val result = search.search("办法做好喽", true)
+        assertTrue(result.isFuzzy)
+        assertEquals(1L, result.candidates.single().item.id)
+        assertEquals(listOf(4, 5, 7, 8), result.candidates.single().matchedIndices)
+    }
+
     @Test fun highlightsOnlyAlignedCharactersInFuzzyResults() = runBlocking {
         assertEquals(listOf(3, 4, 7, 8),
             FuzzyTextMatcher.match("湖北大学", "学校：湖北工业大学")!!.matchedIndices)

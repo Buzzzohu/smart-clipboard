@@ -253,7 +253,7 @@ class QqSuggestionService : AccessibilityService() {
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP
-            y = bounds.top - height
+            y = keyboardAnchor(ime, bounds) - height
             x = 0
         }
         runCatching {
@@ -264,11 +264,18 @@ class QqSuggestionService : AccessibilityService() {
             positionJob = scope.launch {
                 while (strip === panel) {
                     delay(80)
-                    if (!inputContextValid(packageName, query)) {
-                        hideStrip()
-                        return@launch
+                    when (SuggestionTrackingPolicy.decide(currentQuery == query,
+                        currentPackage == packageName, inputContextValid(packageName, query))) {
+                        SuggestionTrackingPolicy.Action.REMOVE_STALE_VIEW -> {
+                            hideStripView()
+                            return@launch
+                        }
+                        SuggestionTrackingPolicy.Action.HIDE_SESSION -> {
+                            hideStrip()
+                            return@launch
+                        }
+                        SuggestionTrackingPolicy.Action.UPDATE_POSITION -> refreshStripPosition()
                     }
-                    refreshStripPosition()
                 }
             }
         }
@@ -290,12 +297,35 @@ class QqSuggestionService : AccessibilityService() {
         // IME bounds use screen coordinates; the overlay's layout origin can have
         // system-bar insets. Correct from its actual screen location, not a guessed inset.
         val nextY = SuggestionPosition.layoutY(
-            params.y, location[1], bounds.top, params.height, 0
+            params.y, location[1], keyboardAnchor(ime, bounds), params.height, 0
         )
         if (params.y == nextY) return
         params.y = nextY
         runCatching { windowManager.updateViewLayout(panel, params) }
             .onFailure { hideStrip() }
+    }
+
+    private fun keyboardAnchor(ime: AccessibilityWindowInfo, bounds: Rect): Int {
+        val root = ime.root ?: return bounds.top
+        // Only the measured Sogou structure is adapted. Other keyboards retain
+        // their normal window anchor. Never inspect IME text or descriptions.
+        if (root.packageName?.toString() != "com.sohu.inputmethod.sogou") return bounds.top
+        fun Rect.band() = KeyboardAnchor.Band(left, top, right, bottom)
+        var remaining = 120
+        fun find(node: AccessibilityNodeInfo, depth: Int): Int {
+            if (--remaining < 0 || depth > 10) return bounds.top
+            val children = (0 until node.childCount).mapNotNull(node::getChild)
+                .filter { it.isVisibleToUser }
+            val bands = children.map { Rect().also(it::getBoundsInScreen).band() }
+            val anchor = KeyboardAnchor.candidateTop(bounds.band(), bands, dp(48), dp(120))
+            if (anchor != bounds.top) return anchor
+            for (child in children) {
+                val found = find(child, depth + 1)
+                if (found != bounds.top) return found
+            }
+            return bounds.top
+        }
+        return find(root, 0)
     }
 
     private fun applySuggestion(packageName: String, query: String, item: ClipboardItem) {
