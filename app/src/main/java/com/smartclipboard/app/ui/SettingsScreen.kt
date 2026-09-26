@@ -26,6 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +46,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ImportSettings
 import com.smartclipboard.app.clipboard.ClipboardViewModel
-import com.smartclipboard.app.suggestion.SuggestionApp
 import com.smartclipboard.app.suggestion.SuggestionSettings
 
 /** Each supported app opts in separately; all switches share the existing service. */
@@ -63,6 +65,16 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
+    // Service binding can finish after returning from system settings. Refresh only
+    // while this page is visible, rather than leaving the first sampled value stale.
+    LaunchedEffect(lifecycleOwner, context) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                connected = SuggestionSettings.isServiceConnected(context)
+                delay(1_000)
+            }
+        }
+    }
     var fuzzyEnabled by remember { mutableStateOf(SuggestionSettings.isFuzzyEnabled(context)) }
     var stripSender by remember { mutableStateOf(ImportSettings.stripSender(context)) }
     var overlayOpacity by remember { mutableStateOf(SuggestionSettings.overlayOpacity(context)) }

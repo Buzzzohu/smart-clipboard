@@ -17,6 +17,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ScrollView
 import android.widget.BaseAdapter
 import android.view.ViewGroup
 import android.widget.TextView
@@ -213,6 +214,61 @@ class QqSuggestionService : AccessibilityService() {
             }
             elevation = dp(8).toFloat()
         }
+        fun resizePanel(newHeight: Int) {
+            val layout = panel.layoutParams as? WindowManager.LayoutParams ?: return
+            // Keep the lower edge attached to the IME while switching between list and preview.
+            panel.alpha = 0f
+            layout.y += layout.height - newHeight
+            layout.height = newHeight
+            layout.flags = layout.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            visibilityGate = OverlayVisibilityGate()
+            runCatching { windowManager.updateViewLayout(panel, layout) }.onFailure { hideStrip() }
+        }
+        fun previewItem(item: ClipboardItem) {
+            if (strip !== panel || !inputContextValid(packageName, query)) return
+            val currentIme = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } ?: return
+            val currentBounds = Rect().also(currentIme::getBoundsInScreen)
+            val previewHeight = minOf(dp(320), currentBounds.top - dp(32))
+            if (previewHeight < dp(100)) return
+            val originalViews = (0 until panel.childCount).map { panel.getChildAt(it) }
+            originalViews.forEach { it.visibility = View.GONE }
+            val preview = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(4), dp(12), dp(8))
+            }
+            val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+            header.addView(TextView(this).apply {
+                text = "内容预览"
+                textSize = 16f
+                setTextColor(textColor)
+            }, LinearLayout.LayoutParams(0, dp(44), 1f))
+            header.addView(TextView(this).apply {
+                text = "×"
+                contentDescription = "关闭预览"
+                textSize = 26f
+                gravity = Gravity.CENTER
+                setTextColor(textColor)
+                setOnClickListener {
+                    if (strip === panel) {
+                        panel.removeView(preview)
+                        originalViews.forEach { it.visibility = View.VISIBLE }
+                        resizePanel(height)
+                    }
+                }
+            }, LinearLayout.LayoutParams(dp(44), dp(44)))
+            preview.addView(header)
+            preview.addView(ScrollView(this).apply {
+                isFillViewport = true
+                addView(TextView(this@QqSuggestionService).apply {
+                    text = item.content
+                    textSize = 16f
+                    setTextColor(textColor)
+                    setPadding(dp(4), dp(8), dp(4), dp(8))
+                }, FrameLayout.LayoutParams(-1, -2))
+            }, LinearLayout.LayoutParams(-1, 0, 1f))
+            panel.addView(preview, FrameLayout.LayoutParams(-1, -1))
+            resizePanel(previewHeight)
+        }
         fun candidateRow(position: Int): View {
             val candidate = suggestions[position]
             val item = candidate.item
@@ -251,6 +307,7 @@ class QqSuggestionService : AccessibilityService() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), 0, dp(46), 0)
                 setOnClickListener { applySuggestion(packageName, query, item) }
+                setOnLongClickListener { previewItem(item); true }
             }
             row.addView(ImageView(this).apply {
                 val icon = icons[item.category]

@@ -12,14 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.smartclipboard.app.suggestion.SuggestionApp
 import com.smartclipboard.app.suggestion.SuggestionSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private data class InstalledApp(val packageName: String, val label: String)
 
-/** Package selection is local; existing preset preference keys survive upgrades. */
+/** The list contains only packages the user has explicitly added. */
 @Composable
 internal fun SuggestionAppsSection(connected: Boolean) {
     val context = LocalContext.current
@@ -31,17 +30,15 @@ internal fun SuggestionAppsSection(connected: Boolean) {
         preferences.registerOnSharedPreferenceChangeListener(listener)
         onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    val presets = remember { listOf("QQ", "小黑盒", "bilibili", "抖音", "JMComic2", "JMComic3") }
     val apps = remember(revision) {
-        SuggestionApp.entries.mapIndexed { index, app -> InstalledApp(app.packageName, presets[index]) } +
-            SuggestionSettings.customPackages(context).map { InstalledApp(it, SuggestionSettings.appLabel(context, it)) }
+        SuggestionSettings.customPackages(context).map { InstalledApp(it, SuggestionSettings.appLabel(context, it)) }
                 .sortedBy { it.label }
     }
     Text("自行添加需要输入联想的应用。能否读取和填入文字取决于应用的输入框。")
     TextButton(onClick = { adding = true }) { Text("＋ 添加应用") }
+    if (apps.isEmpty()) Text("还没有添加应用，点击上方按钮选择。")
     apps.forEach { app ->
         val enabled = remember(revision, app.packageName) { SuggestionSettings.isEnabled(context, app.packageName) }
-        val custom = SuggestionApp.fromPackage(app.packageName) == null
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -51,10 +48,9 @@ internal fun SuggestionAppsSection(connected: Boolean) {
                 Text(when {
                     !enabled -> "已关闭"
                     !connected -> "请先开启无障碍服务"
-                    custom -> "已开启 · 输入框兼容性待验证"
-                    else -> "已开启"
+                    else -> "已开启 · 输入框兼容性待验证"
                 }, style = MaterialTheme.typography.bodyMedium)
-                if (custom) TextButton(onClick = { SuggestionSettings.removeApp(context, app.packageName) }) { Text("移除") }
+                TextButton(onClick = { SuggestionSettings.removeApp(context, app.packageName) }) { Text("移除") }
             }
         }
         Spacer(Modifier.height(12.dp))
