@@ -5,7 +5,9 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-data class SuggestionCandidate(val item: ClipboardItem, val matchStart: Int = 0)
+/** Indices refer to original content, so skipped and mistyped characters stay unhighlighted. */
+data class SuggestionCandidate(val item: ClipboardItem, val matchStart: Int = 0,
+    val matchedIndices: List<Int> = emptyList())
 data class SuggestionResult(val candidates: List<SuggestionCandidate>, val isFuzzy: Boolean = false)
 
 /** The page reader is lazy: normal matches, short queries and an off switch never scan the library. */
@@ -47,6 +49,7 @@ internal class SuggestionSearch(
             }
             afterId = page.last().id
         }
-        SuggestionResult(best.map { SuggestionCandidate(it.item, it.match.start) }, isFuzzy = best.isNotEmpty())
+        SuggestionResult(best.map { SuggestionCandidate(it.item, it.match.start, it.match.matchedIndices) },
+            isFuzzy = best.isNotEmpty())
     }
 }

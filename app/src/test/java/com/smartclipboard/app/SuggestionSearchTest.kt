@@ -9,6 +9,22 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SuggestionSearchTest {
+    @Test fun highlightsOnlyAlignedCharactersInFuzzyResults() = runBlocking {
+        assertEquals(listOf(3, 4, 7, 8),
+            FuzzyTextMatcher.match("湖北大学", "学校：湖北工业大学")!!.matchedIndices)
+        assertEquals(listOf(0, 1, 2),
+            FuzzyTextMatcher.match("智能制照", "智能制造")!!.matchedIndices)
+        assertEquals(listOf(0, 1, 3, 4),
+            FuzzyTextMatcher.match("智能制造", "智能的制造")!!.matchedIndices)
+        assertEquals(listOf(0, 1, 2),
+            FuzzyTextMatcher.match("智能制造", "智能制")!!.matchedIndices)
+        val search = SuggestionSearch({ emptyList() }, { after, _ ->
+            if (after == 0L) listOf(item(1, "学校：湖北工业大学")) else emptyList()
+        })
+        assertEquals(listOf(3, 4, 7, 8), search.search("湖北大学", true)
+            .candidates.single().matchedIndices)
+    }
+
     private fun item(id: Long, content: String) = ClipboardItem(id, content, 0, 0)
 
     @Test fun orderedGapsFindTheRequestedExampleAndPreviewOffset() = runBlocking {

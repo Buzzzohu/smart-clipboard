@@ -2,11 +2,11 @@
 
 一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及 QQ、小黑盒、bilibili 和抖音输入联想。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
 
-**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.4-settings.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
+**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.5-highlight.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
 
-> 当前版本：0.9.4。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+> 当前版本：0.9.5。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
 
-本次更新：应用联想开关移至“设置 → 应用联想”独立子页面；候选框底部紧邻输入法候选栏上方，保留键盘位置跟随、退出隐藏和“相似匹配”标题顶部留白。实际手机效果待验证。
+本次更新：移除“相似匹配”标题及整行留白，恢复统一候选框布局；模糊结果仅高亮实际匹配的字，跳过与错配的字不高亮。保留键盘位置跟随、退出隐藏、滚动和关闭功能。实际手机效果待验证。
 
 ## ✨ 功能
 
@@ -27,7 +27,7 @@
 
 - **本地匹配** — 在已启用应用的可编辑输入框输入至少 2 个字时，查找资料库中包含该内容的条目。
 - **滚动选择** — 在键盘上方显示浅色候选框，支持滚动浏览最多 20 条匹配结果；点击候选尝试填入当前输入框。
-- **模糊回退** — 没有普通候选且输入至少 4 个字时，尝试按原顺序跳字匹配，或容忍一处错字、漏字、多字；最多显示 5 条，标记为“相似匹配”。默认开启，可在设置里关闭；首页搜索规则不变。
+- **模糊回退** — 没有普通候选且输入至少 4 个字时，尝试按原顺序跳字匹配，或容忍一处错字、漏字、多字；最多显示 5 条，实际匹配的字以蓝色加粗高亮。默认开启，可在设置里关闭；首页搜索规则不变。
 - **保守匹配** — 跳字匹配要求每段至少两个连续字符，最多两处间隔、共跳过不超过输入长度且至多 8 个字符。不混合跳段与错字纠正，不做同义词或语义搜索；相似程度优先于收藏和使用时间。
 - **独立开关** — 在应用“设置”中分别控制 QQ、小黑盒、bilibili 和抖音联想，并在 Android 系统设置中启用同一个 Smart Clipboard 无障碍服务。
 - **适用范围** — QQ（`com.tencent.mobileqq`）、小黑盒（`com.max.xiaoheihe`）、bilibili（`tv.danmaku.bili`）、抖音标准版（`com.ss.android.ugc.aweme`）。B站和抖音优先支持评论、私信，不刻意排除其他普通输入框。

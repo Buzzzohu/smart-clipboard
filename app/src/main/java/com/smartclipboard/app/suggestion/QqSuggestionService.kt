@@ -164,8 +164,7 @@ class QqSuggestionService : AccessibilityService() {
         if (ime == null) return
         val bounds = Rect().also(ime::getBoundsInScreen)
         val rowHeight = dp(44)
-        val headerHeight = if (result.isFuzzy) dp(30) else 0
-        val height = minOf(suggestions.size, 3) * rowHeight + dp(8) + headerHeight
+        val height = minOf(suggestions.size, 3) * rowHeight + dp(8)
         if (bounds.top <= height + dp(8)) return
         val backgroundColor = 0xFFF7F8FC.toInt()
         val borderColor = 0xFFCCD2DD.toInt()
@@ -190,14 +189,25 @@ class QqSuggestionService : AccessibilityService() {
             val match = candidate.matchStart
             val start = if (match > 12) match - 12 else 0
             val end = minOf(full.length, start + 80)
+            var contentOffset = 0
             val preview = buildString {
                 append("📋 ")
                 if (item.favorite) append("★ ")
                 if (start > 0) append("…")
+                contentOffset = length
                 append(full.substring(start, end))
                 if (end < full.length) append("…")
             }
             val styled = SpannableString(preview)
+            // Matching supplies original UTF-16 offsets. Translate past the icon,
+            // favorite marker and preview ellipsis; never color skipped characters.
+            candidate.matchedIndices.filter { it in start until end }.forEach { index ->
+                val offset = contentOffset + index - start
+                styled.setSpan(ForegroundColorSpan(accentColor), offset, offset + 1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                styled.setSpan(StyleSpan(Typeface.BOLD), offset, offset + 1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
             var position = preview.indexOf(query, ignoreCase = true)
             while (position >= 0) {
                 styled.setSpan(ForegroundColorSpan(accentColor), position, position + query.length,
@@ -222,16 +232,7 @@ class QqSuggestionService : AccessibilityService() {
             isScrollbarFadingEnabled = false
             isFillViewport = false
             addView(rows)
-        }, FrameLayout.LayoutParams(-1, -1).apply { topMargin = headerHeight })
-        if (result.isFuzzy) {
-            panel.addView(TextView(this).apply {
-                text = getString(R.string.fuzzy_match_label)
-                textSize = 12f
-                setTextColor(accentColor)
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(4), dp(46), 0)
-            }, FrameLayout.LayoutParams(-1, headerHeight, Gravity.TOP))
-        }
+        }, FrameLayout.LayoutParams(-1, -1))
         panel.addView(TextView(this).apply {
             text = "×"
             contentDescription = getString(R.string.close)
