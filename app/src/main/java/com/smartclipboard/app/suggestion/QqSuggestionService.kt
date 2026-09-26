@@ -252,7 +252,7 @@ class QqSuggestionService : AccessibilityService() {
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP
-            y = bounds.top - height - dp(6)
+            y = bounds.top - height
             x = 0
         }
         runCatching {
@@ -289,7 +289,7 @@ class QqSuggestionService : AccessibilityService() {
         // IME bounds use screen coordinates; the overlay's layout origin can have
         // system-bar insets. Correct from its actual screen location, not a guessed inset.
         val nextY = SuggestionPosition.layoutY(
-            params.y, location[1], bounds.top, params.height, dp(6)
+            params.y, location[1], bounds.top, params.height, 0
         )
         if (params.y == nextY) return
         params.y = nextY

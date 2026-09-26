@@ -9,8 +9,8 @@ class SuggestionPositionTest {
         var layoutY = 1900
         // Replay the keyboard opening; include a 24px system-bar offset.
         for (keyboardTop in listOf(2200, 1900, 1600, 1400, 1400)) {
-            layoutY = SuggestionPosition.layoutY(layoutY, layoutY + 24, keyboardTop, 300, 6)
-            assertEquals(keyboardTop - 6, layoutY + 24 + 300)
+            layoutY = SuggestionPosition.layoutY(layoutY, layoutY + 24, keyboardTop, 300, 0)
+            assertEquals(keyboardTop, layoutY + 24 + 300)
         }
     }
 

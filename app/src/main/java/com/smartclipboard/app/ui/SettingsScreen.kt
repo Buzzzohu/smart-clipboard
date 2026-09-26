@@ -25,6 +25,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +43,16 @@ import com.smartclipboard.app.suggestion.SuggestionSettings
 /** Each supported app opts in separately; all switches share the existing service. */
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
+    var showApps by rememberSaveable { mutableStateOf(false) }
+    val navigateBack: () -> Unit = { if (showApps) showApps = false else onBack() }
+    // Separate page instances keep scrolling and system Back behavior independent.
+    key(showApps) {
+        SettingsPage(showApps, navigateBack, onOpenApps = { showApps = true })
+    }
+}
+
+@Composable
+private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,54 +77,69 @@ fun SettingsScreen(onBack: () -> Unit) {
             .verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onBack) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
-                Text(stringResource(R.string.settings_title), Modifier.padding(top = 12.dp),
+                Text(stringResource(if (appsPage) R.string.app_suggestions_menu else R.string.settings_title), Modifier.padding(top = 12.dp),
                     style = MaterialTheme.typography.headlineSmall)
             }
             Spacer(Modifier.height(24.dp))
-            Text(stringResource(R.string.settings_description), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(10.dp))
-            SuggestionApp.entries.forEach { app ->
-                val name = stringResource(when (app) {
-                    SuggestionApp.QQ -> R.string.suggestion_app_qq
-                    SuggestionApp.HEYBOX -> R.string.suggestion_app_heybox
-                    SuggestionApp.BILIBILI -> R.string.suggestion_app_bilibili
-                    SuggestionApp.DOUYIN -> R.string.suggestion_app_douyin
-                })
-                val enabled = enabledApps[app] == true
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(stringResource(R.string.suggestion_app_title, name), Modifier.weight(1f),
-                                style = MaterialTheme.typography.titleMedium)
-                            Switch(checked = enabled, onCheckedChange = {
-                                SuggestionSettings.setEnabled(context, app, it)
-                                enabledApps = enabledApps + (app to it)
-                            })
+            if (appsPage) {
+                Text(stringResource(R.string.settings_description), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(10.dp))
+                SuggestionApp.entries.forEach { app ->
+                    val name = stringResource(when (app) {
+                        SuggestionApp.QQ -> R.string.suggestion_app_qq
+                        SuggestionApp.HEYBOX -> R.string.suggestion_app_heybox
+                        SuggestionApp.BILIBILI -> R.string.suggestion_app_bilibili
+                        SuggestionApp.DOUYIN -> R.string.suggestion_app_douyin
+                    })
+                    val enabled = enabledApps[app] == true
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.suggestion_app_title, name), Modifier.weight(1f),
+                                    style = MaterialTheme.typography.titleMedium)
+                                Switch(checked = enabled, onCheckedChange = {
+                                    SuggestionSettings.setEnabled(context, app, it)
+                                    enabledApps = enabledApps + (app to it)
+                                })
+                            }
+                            Text(stringResource(when {
+                                enabled && connected -> R.string.suggestion_app_active
+                                enabled -> R.string.qq_experiment_waiting
+                                else -> R.string.suggestion_app_inactive
+                            }, name), style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(stringResource(when {
-                            enabled && connected -> R.string.suggestion_app_active
-                            enabled -> R.string.qq_experiment_waiting
-                            else -> R.string.suggestion_app_inactive
-                        }, name), style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+            } else {
+                Card(onClick = onOpenApps, modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.app_suggestions_menu), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.app_suggestions_menu_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("›", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-            }
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.fuzzy_search_title), Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium)
-                        Switch(checked = fuzzyEnabled, onCheckedChange = {
-                            fuzzyEnabled = it
-                            SuggestionSettings.setFuzzyEnabled(context, it)
-                        })
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.fuzzy_search_title), Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleMedium)
+                            Switch(checked = fuzzyEnabled, onCheckedChange = {
+                                fuzzyEnabled = it
+                                SuggestionSettings.setFuzzyEnabled(context, it)
+                            })
+                        }
+                        Text(stringResource(R.string.fuzzy_search_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text(stringResource(R.string.fuzzy_search_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(Modifier.height(12.dp))

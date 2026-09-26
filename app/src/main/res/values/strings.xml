@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_suggestions_menu">应用联想</string>
+    <string name="app_suggestions_menu_description">管理 QQ、小黑盒、bilibili 和抖音的联想开关</string>
     <string name="app_name">Smart Clipboard</string>
     <string name="import_instruction">复制文本后打开应用，或点击按钮读取当前剪贴板。</string>
     <string name="clipboard_ignored_by_rule">纯数字或英文字母内容已自动忽略。</string>
