@@ -62,6 +62,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     val favoritesOnly by viewModel.favoritesOnly.collectAsStateWithLifecycle()
 
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showCategories by rememberSaveable { mutableStateOf(false) }
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var showManualSheet by rememberSaveable { mutableStateOf(false) }
     var showManualEntry by rememberSaveable { mutableStateOf(false) }
@@ -100,8 +101,10 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
         }
     }
 
-    if (showSettings) {
-        SettingsScreen(viewModel, onBack = { showSettings = false })
+    if (showCategories) {
+        CategoryManagerScreen(viewModel) { showCategories = false; filterOpen = true }
+    } else if (showSettings) {
+        SettingsScreen(onBack = { showSettings = false })
     } else {
         BackHandler(filterOpen) { filterOpen = false }
         Box(Modifier.fillMaxSize()) {
@@ -217,6 +220,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                 favoritesOnly = favoritesOnly,
                 onOpen = { revealedId = null; filterOpen = true },
                 onClose = { filterOpen = false },
+                onManageCategories = { filterOpen = false; showCategories = true },
                 onCategory = {
                     viewModel.setCategory(it)
                     revealedId = null

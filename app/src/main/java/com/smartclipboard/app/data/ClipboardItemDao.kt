@@ -37,6 +37,10 @@ interface ClipboardItemDao {
     """)
     suspend fun findSuggestions(query: String): List<ClipboardItem>
 
+    /** Category-name lookup returns every item, in the same priority order as suggestions. */
+    @Query("SELECT * FROM ClipboardItem WHERE category = :category ORDER BY favorite DESC, lastUsedTime DESC, updatedTime DESC, id DESC")
+    suspend fun categorySuggestions(category: String): List<ClipboardItem>
+
     @Query("SELECT * FROM ClipboardItem WHERE id > :afterId ORDER BY id LIMIT :limit")
     suspend fun suggestionPage(afterId: Long, limit: Int): List<ClipboardItem>
 

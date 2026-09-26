@@ -7,6 +7,9 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.util.LruCache
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+import com.smartclipboard.app.R
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +17,19 @@ import kotlinx.coroutines.withContext
 
 /** Icons are copied into private storage; gallery URI access is never needed after import. */
 object CategoryIcons {
+    // Seeded IDs stay stable even when a built-in category is renamed.
+    fun defaultResource(category: LibraryCategory?): Int = when (category?.id) {
+        2L -> R.drawable.ic_sidebar_text
+        3L -> R.drawable.ic_sidebar_link
+        4L -> R.drawable.ic_sidebar_mail
+        5L -> R.drawable.ic_sidebar_phone
+        else -> R.drawable.ic_sidebar_library
+    }
+
+    suspend fun loadCategory(context: Context, category: LibraryCategory): Bitmap? =
+        load(context, category.iconFile) ?: ContextCompat.getDrawable(context, defaultResource(category))
+            ?.toBitmap(72, 72)
+
     private val cache = LruCache<String, Bitmap>(40)
     private fun directory(context: Context) = File(context.filesDir, "category-icons").apply { mkdirs() }
     private fun file(context: Context, name: String): File {

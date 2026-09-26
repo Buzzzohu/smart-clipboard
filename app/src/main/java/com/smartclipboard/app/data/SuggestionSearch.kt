@@ -13,7 +13,8 @@ data class SuggestionResult(val candidates: List<SuggestionCandidate>, val isFuz
 /** The page reader is lazy: normal matches, short queries and an off switch never scan the library. */
 internal class SuggestionSearch(
     private val exactLookup: suspend (String) -> List<ClipboardItem>,
-    private val readPage: suspend (Long, Int) -> List<ClipboardItem>
+    private val readPage: suspend (Long, Int) -> List<ClipboardItem>,
+    private val categoryLookup: suspend (String) -> List<ClipboardItem>? = { null }
 ) {
     private data class Ranked(val item: ClipboardItem, val match: FuzzyTextMatcher.Match)
     private val order = compareByDescending<Ranked> { it.match.score }
@@ -25,6 +26,12 @@ internal class SuggestionSearch(
     suspend fun search(rawQuery: String, fuzzyEnabled: Boolean): SuggestionResult = withContext(Dispatchers.Default) {
         val query = rawQuery.trim()
         if (query.isBlank()) return@withContext SuggestionResult(emptyList())
+        // Category selection is derived only from this query; no sticky category filter is stored.
+        // Check before the two-character text threshold so one-character categories also work.
+        categoryLookup(query)?.let { items ->
+            return@withContext SuggestionResult(items.map { SuggestionCandidate(it) })
+        }
+        if (query.length < 2) return@withContext SuggestionResult(emptyList())
         val exact = exactLookup(query).filterNot { it.content.equals(query, ignoreCase = true) }
         if (exact.isNotEmpty()) return@withContext SuggestionResult(exact.take(20).map {
             SuggestionCandidate(it, it.content.indexOf(query, ignoreCase = true).coerceAtLeast(0))

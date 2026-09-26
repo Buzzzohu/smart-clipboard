@@ -96,7 +96,7 @@ private fun CategoryEditorDialog(category: LibraryCategory?, onDismiss: () -> Un
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("分类名称（最多24字）") }, singleLine = true, enabled = !busy)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (cropped != null) androidx.compose.foundation.Image(cropped!!.asImageBitmap(), null, Modifier.size(48.dp))
-                else CategoryIcon(if (resetIcon) null else category, Modifier.size(48.dp))
+                else CategoryIcon(if (resetIcon) category?.copy(iconFile = null) else category, Modifier.size(48.dp))
                 TextButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text("选择图片") }
                 TextButton(onClick = { cropped = null; resetIcon = true }, enabled = !busy) { Text("默认图标") }
             }

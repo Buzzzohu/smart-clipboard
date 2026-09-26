@@ -16,7 +16,9 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
+import android.widget.ListView
+import android.widget.BaseAdapter
+import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.ImageView
 import android.graphics.Bitmap
@@ -109,7 +111,7 @@ class QqSuggestionService : AccessibilityService() {
         }
         val queryPackage = activePackage ?: return
         val query = typed.orEmpty()
-        if (query.length < 2 || query.length > 40 || query.contains('\n')) {
+        if (query.isBlank() || query.length > 40 || query.contains('\n')) {
             if (dismissedSuggestion != (queryPackage to query)) dismissedSuggestion = null
             hideStrip()
             return
@@ -145,7 +147,7 @@ class QqSuggestionService : AccessibilityService() {
                 val needed = suggestions.candidates.map { it.item.category }.toSet()
                 val icons = try {
                     repository.categoryList.first().filter { it.name in needed }
-                        .associate { it.name to CategoryIcons.load(this@QqSuggestionService, it.iconFile) }
+                        .associate { it.name to CategoryIcons.loadCategory(this@QqSuggestionService, it) }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { emptyMap() }
                 if (currentQuery == query && currentPackage == queryPackage && inputContextValid(queryPackage, query)) {
@@ -216,11 +218,8 @@ class QqSuggestionService : AccessibilityService() {
             }
             elevation = dp(8).toFloat()
         }
-        val rows = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        }
-        suggestions.forEach { candidate ->
+        fun candidateRow(position: Int): View {
+            val candidate = suggestions[position]
             val item = candidate.item
             val full = item.content.replace('\n', ' ')
             val match = candidate.matchStart
@@ -278,13 +277,23 @@ class QqSuggestionService : AccessibilityService() {
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             }, LinearLayout.LayoutParams(0, rowHeight, 1f))
-            rows.addView(row, LinearLayout.LayoutParams(-1, rowHeight))
+            row.layoutParams = android.widget.AbsListView.LayoutParams(-1, rowHeight)
+            return row
         }
-        panel.addView(ScrollView(this).apply {
+        // Inflate visible rows on demand so category results need no arbitrary item cap.
+        panel.addView(ListView(this).apply {
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            divider = null
+            dividerHeight = 0
             isVerticalScrollBarEnabled = true
             isScrollbarFadingEnabled = false
-            isFillViewport = false
-            addView(rows)
+            adapter = object : BaseAdapter() {
+                override fun getCount() = suggestions.size
+                override fun getItem(position: Int) = suggestions[position]
+                override fun getItemId(position: Int) = suggestions[position].item.id
+                override fun hasStableIds() = true
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View = candidateRow(position)
+            }
         }, FrameLayout.LayoutParams(-1, -1))
         panel.addView(TextView(this).apply {
             text = "×"

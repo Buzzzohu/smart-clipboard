@@ -48,22 +48,17 @@ import com.smartclipboard.app.suggestion.SuggestionSettings
 
 /** Each supported app opts in separately; all switches share the existing service. */
 @Composable
-fun SettingsScreen(viewModel: ClipboardViewModel, onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit) {
     var showApps by rememberSaveable { mutableStateOf(false) }
-    var showCategories by rememberSaveable { mutableStateOf(false) }
-    if (showCategories) {
-        CategoryManagerScreen(viewModel) { showCategories = false }
-        return
-    }
     val navigateBack: () -> Unit = { if (showApps) showApps = false else onBack() }
     // Separate page instances keep scrolling and system Back behavior independent.
     key(showApps) {
-        SettingsPage(showApps, navigateBack, onOpenApps = { showApps = true }, onOpenCategories = { showCategories = true })
+        SettingsPage(showApps, navigateBack, onOpenApps = { showApps = true })
     }
 }
 
 @Composable
-private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -> Unit, onOpenCategories: () -> Unit) {
+private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -129,13 +124,6 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
                     Spacer(Modifier.height(12.dp))
                 }
             } else {
-                Card(onClick = onOpenCategories, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("分类管理  ›", style = MaterialTheme.typography.titleMedium)
-                        Text("新建分类、修改名称与图标", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text("悬浮窗透明度  ${((1f - overlayOpacity) * 100).roundToInt()}%",

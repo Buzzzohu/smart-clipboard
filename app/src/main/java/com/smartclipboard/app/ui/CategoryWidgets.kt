@@ -21,7 +21,7 @@ fun CategoryIcon(category: LibraryCategory?, modifier: Modifier = Modifier.size(
         value = CategoryIcons.load(context, category?.iconFile)
     }
     if (bitmap != null) Image(bitmap!!.asImageBitmap(), null, modifier.clip(RoundedCornerShape(5.dp)))
-    else Icon(painterResource(R.drawable.ic_sidebar_library), null, modifier)
+    else Icon(painterResource(CategoryIcons.defaultResource(category)), null, modifier)
 }
 
 @Composable

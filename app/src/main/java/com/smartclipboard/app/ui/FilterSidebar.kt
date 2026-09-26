@@ -63,6 +63,7 @@ fun BoxScope.FilterSidebar(
     favoritesOnly: Boolean,
     onOpen: () -> Unit,
     onClose: () -> Unit,
+    onManageCategories: () -> Unit,
     onCategory: (String?) -> Unit,
     onFavorites: () -> Unit
 ) {
@@ -117,7 +118,8 @@ fun BoxScope.FilterSidebar(
             color = sidebarBackground,
             shadowElevation = 0.dp
         ) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+              Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(20.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Smart Clipboard", Modifier.weight(1f),
@@ -148,6 +150,10 @@ fun BoxScope.FilterSidebar(
                 SidebarHeading("筛选")
                 FilterOption(stringResource(R.string.filter_favorites), favoritesOnly, R.drawable.ic_action_star, onFavorites)
                 Spacer(Modifier.height(24.dp))
+              }
+              HorizontalDivider(color = Color(0xFFEDEDED))
+              FilterOption("分类管理", false, R.drawable.ic_action_edit, onManageCategories)
+              Spacer(Modifier.height(12.dp))
             }
         }
     }

@@ -12,7 +12,13 @@ class ClipboardRepository(private val database: ClipboardDatabase) {
     fun observeSearch(query: String, category: String?, favoritesOnly: Boolean): Flow<List<ClipboardItem>> =
         dao.observeSearch(query.trim(), category, favoritesOnly)
 
-    private val suggestionSearch = SuggestionSearch(dao::findSuggestions, dao::suggestionPage)
+    private val suggestionSearch = SuggestionSearch(dao::findSuggestions, dao::suggestionPage,
+        categoryLookup = { name ->
+            database.withTransaction {
+                // Null means no exact category; an empty list means the category exists but is empty.
+                categories.byName(name)?.let { dao.categorySuggestions(it.name) }
+            }
+        })
 
     suspend fun findSuggestions(query: String, fuzzyEnabled: Boolean): SuggestionResult =
         suggestionSearch.search(query, fuzzyEnabled)
