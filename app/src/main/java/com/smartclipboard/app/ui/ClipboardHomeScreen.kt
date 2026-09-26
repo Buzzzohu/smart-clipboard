@@ -166,7 +166,6 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                                             if (revealedId != null) revealedId = null
                                             else viewModel.copy(item)
                                         },
-                                        onCopy = { viewModel.copy(item) },
                                         onEdit = { editing = item },
                                         onDelete = { deleting = item },
                                         onFavorite = { viewModel.toggleFavorite(item.id) },

@@ -8,10 +8,10 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -23,6 +23,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,6 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -57,75 +63,80 @@ fun ClipboardItemCard(
     onReveal: () -> Unit,
     onClose: () -> Unit,
     onCardTap: () -> Unit,
-    onCopy: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onFavorite: () -> Unit,
     onExpand: () -> Unit
 ) {
-    val actionWidth = 256.dp
+    val actionWidth = 180.dp
     val actionWidthPx = with(LocalDensity.current) { actionWidth.toPx() }
     val settledOffset = remember(item.id) { Animatable(0f) }
     val scope = rememberCoroutineScope()
     var dragging by remember(item.id) { mutableStateOf(false) }
     var dragOffset by remember(item.id) { mutableFloatStateOf(0f) }
-    val visibleOffset = if (dragging) dragOffset else settledOffset.value
+    var releaseVelocity by remember(item.id) { mutableFloatStateOf(0f) }
+    val velocityTracker = remember(item.id) { VelocityTracker() }
 
     // A shared state change also closes the previously opened row with the same spring.
     LaunchedEffect(revealed, dragging, actionWidthPx) {
         if (!dragging) {
             settledOffset.animateTo(
                 if (revealed) -actionWidthPx else 0f,
-                spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
+                spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 400f),
+                initialVelocity = releaseVelocity
             )
+            releaseVelocity = 0f
         }
     }
 
-    Box(Modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier.matchParentSize(),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = MaterialTheme.shapes.large
+    Box(Modifier.fillMaxWidth().clipToBounds()) {
+        Row(
+            Modifier.align(Alignment.CenterEnd).width(actionWidth).padding(start = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.align(Alignment.CenterEnd).width(actionWidth).fillMaxHeight(),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CardAction(stringResource(R.string.copy_item), false) { onCopy(); onClose() }
-                    CardAction(stringResource(R.string.edit_item), false) { onEdit(); onClose() }
-                    CardAction(stringResource(if (item.favorite) R.string.unfavorite_item else R.string.favorite_item), false) {
-                        onFavorite(); onClose()
-                    }
-                    CardAction(stringResource(R.string.delete_item), true) { onDelete(); onClose() }
-                }
-            }
+            CardAction(stringResource(R.string.edit_item), R.drawable.ic_action_edit, revealed) { onEdit(); onClose() }
+            CardAction(stringResource(if (item.favorite) R.string.unfavorite_item else R.string.favorite_item),
+                R.drawable.ic_action_star, revealed, selected = item.favorite) { onFavorite(); onClose() }
+            CardAction(stringResource(R.string.delete_item), R.drawable.ic_action_delete, revealed) { onDelete(); onClose() }
         }
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(visibleOffset.roundToInt(), 0) }
+                .offset { IntOffset((if (dragging) dragOffset else settledOffset.value).roundToInt(), 0) }
                 .pointerInput(item.id, revealed) {
                     detectHorizontalDragGestures(
                         onDragStart = {
+                            velocityTracker.resetTracking()
+                            releaseVelocity = 0f
                             dragOffset = settledOffset.value
                             dragging = true
                         },
                         onDragEnd = {
-                            val open = if (revealed) {
-                                dragOffset < -actionWidthPx * 0.7f
-                            } else {
-                                dragOffset < -actionWidthPx * 0.3f
+                            val velocity = velocityTracker.calculateVelocity().x
+                            val open = when {
+                                velocity < -900f -> true
+                                velocity > 900f -> false
+                                else -> dragOffset < -actionWidthPx * 0.5f
                             }
+                            releaseVelocity = velocity.coerceIn(-4000f, 4000f)
                             scope.launch {
                                 settledOffset.snapTo(dragOffset)
                                 if (open) onReveal() else onClose()
                                 dragging = false
                             }
                         },
-                        onDragCancel = { dragging = false },
+                        onDragCancel = {
+                            scope.launch {
+                                settledOffset.snapTo(dragOffset)
+                                releaseVelocity = 0f
+                                dragging = false
+                            }
+                        },
                         onHorizontalDrag = { change, distance ->
+                            // The card itself moves; track in its parent's coordinates.
+                            velocityTracker.addPosition(change.uptimeMillis,
+                                change.position + androidx.compose.ui.geometry.Offset(dragOffset, 0f))
                             dragOffset = (dragOffset + distance).coerceIn(-actionWidthPx, 0f)
                             change.consume()
                         }
@@ -165,26 +176,28 @@ fun ClipboardItemCard(
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.CardAction(
+private fun CardAction(
     label: String,
-    destructive: Boolean,
+    icon: Int,
+    enabled: Boolean,
+    selected: Boolean = false,
     onClick: () -> Unit
 ) {
-    TextButton(
+    FilledIconButton(
         onClick = onClick,
-        modifier = Modifier.weight(1f),
-        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
-    ) {
-        Text(
-            label,
-            color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        enabled = enabled,
+        modifier = Modifier.size(48.dp),
+        shape = CircleShape,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    ) {
+        Icon(painterResource(icon), contentDescription = label, modifier = Modifier.size(22.dp))
     }
 }
-
 @Composable
 fun ClipboardDetailDialog(item: ClipboardItem, onDismiss: () -> Unit) {
     AlertDialog(
