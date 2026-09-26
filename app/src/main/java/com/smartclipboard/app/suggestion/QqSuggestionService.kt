@@ -22,6 +22,8 @@ import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ClipboardDatabase
 import com.smartclipboard.app.data.ClipboardItem
 import com.smartclipboard.app.data.ClipboardRepository
+import com.smartclipboard.app.data.SuggestionResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,9 +45,10 @@ class QqSuggestionService : AccessibilityService() {
     private var currentPackage: String? = null
     private var dismissedSuggestion: Pair<String, String>? = null
     // Keep this service component name stable so existing Android accessibility approval survives upgrades.
-    private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+    private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         val currentApp = SuggestionApp.fromPackage(currentPackage)
-        if (currentApp != null && !SuggestionSettings.isEnabled(this, currentApp)) hideStrip()
+        if (key == SuggestionSettings.KEY_FUZZY_ENABLED ||
+            (currentApp != null && !SuggestionSettings.isEnabled(this, currentApp))) hideStrip()
     }
 
     override fun onServiceConnected() {
@@ -101,9 +104,14 @@ class QqSuggestionService : AccessibilityService() {
         queryJob?.cancel()
         queryJob = scope.launch {
             delay(180) // Wait for the IME to finish a burst of edits.
-            val suggestions = runCatching { repository.findSuggestions(query) }
-                .getOrDefault(emptyList())
-                .filter { it.content != query }
+            val suggestions = try {
+                repository.findSuggestions(query, SuggestionSettings.isFuzzyEnabled(this@QqSuggestionService))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Database failures are not "no matches" and never start a fallback scan.
+                SuggestionResult(emptyList())
+            }
             if (currentQuery == query && currentPackage == queryPackage &&
                 inputContextValid(queryPackage, query)) {
                 showSuggestions(queryPackage, query, suggestions)
@@ -146,14 +154,16 @@ class QqSuggestionService : AccessibilityService() {
             }
     }
 
-    private fun showSuggestions(packageName: String, query: String, suggestions: List<ClipboardItem>) {
+    private fun showSuggestions(packageName: String, query: String, result: SuggestionResult) {
         hideStripView()
+        val suggestions = result.candidates
         if (suggestions.isEmpty()) return
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
         if (ime == null) return
         val bounds = Rect().also(ime::getBoundsInScreen)
         val rowHeight = dp(44)
-        val height = minOf(suggestions.size, 3) * rowHeight + dp(8)
+        val headerHeight = if (result.isFuzzy) dp(26) else 0
+        val height = minOf(suggestions.size, 3) * rowHeight + dp(8) + headerHeight
         if (bounds.top <= height + dp(8)) return
         val backgroundColor = 0xFFF7F8FC.toInt()
         val borderColor = 0xFFCCD2DD.toInt()
@@ -172,9 +182,10 @@ class QqSuggestionService : AccessibilityService() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(4), dp(4), dp(4), dp(4))
         }
-        suggestions.forEach { item ->
+        suggestions.forEach { candidate ->
+            val item = candidate.item
             val full = item.content.replace('\n', ' ')
-            val match = full.indexOf(query, ignoreCase = true)
+            val match = candidate.matchStart
             val start = if (match > 12) match - 12 else 0
             val end = minOf(full.length, start + 80)
             val preview = buildString {
@@ -209,7 +220,16 @@ class QqSuggestionService : AccessibilityService() {
             isScrollbarFadingEnabled = false
             isFillViewport = false
             addView(rows)
-        }, FrameLayout.LayoutParams(-1, -1))
+        }, FrameLayout.LayoutParams(-1, -1).apply { topMargin = headerHeight })
+        if (result.isFuzzy) {
+            panel.addView(TextView(this).apply {
+                text = getString(R.string.fuzzy_match_label)
+                textSize = 12f
+                setTextColor(accentColor)
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(16), 0, dp(46), 0)
+            }, FrameLayout.LayoutParams(-1, headerHeight, Gravity.TOP))
+        }
         panel.addView(TextView(this).apply {
             text = "×"
             contentDescription = getString(R.string.close)

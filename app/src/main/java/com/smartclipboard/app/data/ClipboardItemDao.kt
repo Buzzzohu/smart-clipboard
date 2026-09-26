@@ -26,10 +26,14 @@ interface ClipboardItemDao {
     @Query("""
         SELECT * FROM ClipboardItem
         WHERE instr(lower(content), lower(:query)) > 0
+          AND lower(content) != lower(:query)
         ORDER BY favorite DESC, lastUsedTime DESC, updatedTime DESC
         LIMIT 20
     """)
     suspend fun findSuggestions(query: String): List<ClipboardItem>
+
+    @Query("SELECT * FROM ClipboardItem WHERE id > :afterId ORDER BY id LIMIT :limit")
+    suspend fun suggestionPage(afterId: Long, limit: Int): List<ClipboardItem>
 
     @Query("SELECT EXISTS(SELECT 1 FROM ClipboardItem WHERE content = :content)")
     suspend fun contains(content: String): Boolean

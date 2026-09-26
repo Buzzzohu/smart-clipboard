@@ -9,8 +9,10 @@ class ClipboardRepository(private val dao: ClipboardItemDao) {
     fun observeSearch(query: String, category: String?, favoritesOnly: Boolean): Flow<List<ClipboardItem>> =
         dao.observeSearch(query.trim(), category, favoritesOnly)
 
-    suspend fun findSuggestions(query: String): List<ClipboardItem> =
-        if (query.isBlank()) emptyList() else dao.findSuggestions(query.trim())
+    private val suggestionSearch = SuggestionSearch(dao::findSuggestions, dao::suggestionPage)
+
+    suspend fun findSuggestions(query: String, fuzzyEnabled: Boolean): SuggestionResult =
+        suggestionSearch.search(query, fuzzyEnabled)
 
     suspend fun contains(content: String): Boolean = dao.contains(content)
 

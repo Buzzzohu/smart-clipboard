@@ -9,6 +9,14 @@ internal object SuggestionSettings {
     private const val PREFS = "qq_suggestion"
     private const val KEY_QQ_ENABLED = "enabled"
     private const val KEY_HEYBOX_ENABLED = "heybox_enabled"
+    const val KEY_FUZZY_ENABLED = "fuzzy_enabled"
+
+    fun isFuzzyEnabled(context: Context): Boolean =
+        preferences(context).getBoolean(KEY_FUZZY_ENABLED, true)
+
+    fun setFuzzyEnabled(context: Context, enabled: Boolean) {
+        preferences(context).edit().putBoolean(KEY_FUZZY_ENABLED, enabled).apply()
+    }
 
     fun isEnabled(context: Context, app: SuggestionApp): Boolean =
         preferences(context).getBoolean(app.preferenceKey(), false)

@@ -48,11 +48,13 @@ fun SettingsScreen(onBack: () -> Unit) {
         mutableStateOf(SuggestionApp.entries.associateWith { SuggestionSettings.isEnabled(context, it) })
     }
     var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
+    var fuzzyEnabled by remember { mutableStateOf(SuggestionSettings.isFuzzyEnabled(context)) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 enabledApps = SuggestionApp.entries.associateWith { SuggestionSettings.isEnabled(context, it) }
                 connected = SuggestionSettings.isServiceConnected(context)
+                fuzzyEnabled = SuggestionSettings.isFuzzyEnabled(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -98,6 +100,22 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
             }
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.fuzzy_search_title), Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium)
+                        Switch(checked = fuzzyEnabled, onCheckedChange = {
+                            fuzzyEnabled = it
+                            SuggestionSettings.setFuzzyEnabled(context, it)
+                        })
+                    }
+                    Text(stringResource(R.string.fuzzy_search_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             TextButton(onClick = {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }) { Text(stringResource(R.string.qq_accessibility_settings)) }
