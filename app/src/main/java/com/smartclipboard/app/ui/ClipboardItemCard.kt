@@ -144,7 +144,14 @@ fun ClipboardItemCard(
                 }
                 .clickable(onClick = onCardTap),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+                draggedElevation = 0.dp,
+                disabledElevation = 0.dp
+            )
         ) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(item.content, maxLines = 2, overflow = TextOverflow.Ellipsis,
