@@ -58,41 +58,69 @@ class QqSuggestionService : AccessibilityService() {
             hideStrip()
             return
         }
+        val kind = event.kind()
+        if (strip == null && kind in setOf(
+                SuggestionEventPolicy.Kind.CONTENT,
+                SuggestionEventPolicy.Kind.OTHER
+            )) return
         val eventPackage = event.packageName?.toString()
-        if (eventPackage == null || eventPackage !in supportedPackages) {
-            // Keyboard and our overlay emit events while a supported app still owns input.
-            if (rootInActiveWindow?.packageName?.toString() !in supportedPackages) hideStrip()
-            return
+        val activePackage = rootInActiveWindow?.packageName?.toString()
+        val typed = activePackage?.takeIf { it in supportedPackages }?.let(::focusedText)
+        val action = SuggestionEventPolicy.decide(
+            kind = kind,
+            eventFromQq = eventPackage in supportedPackages,
+            activeQq = activePackage in supportedPackages,
+            inputFocused = typed != null,
+            keyboardVisible = keyboardVisible(),
+            overlayVisible = strip != null
+        )
+        when (action) {
+            SuggestionEventPolicy.Action.HIDE -> { hideStrip(); return }
+            SuggestionEventPolicy.Action.IGNORE -> return
+            SuggestionEventPolicy.Action.QUERY -> Unit
         }
-        if (event.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED &&
-            event.eventType != AccessibilityEvent.TYPE_VIEW_FOCUSED &&
-            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return
-        val typed = focusedText(eventPackage).orEmpty()
-        if (typed.length < 2 || typed.length > 40 || typed.contains('\n')) {
-            if (typed != dismissedQuery) dismissedQuery = null
+        val queryPackage = activePackage ?: return
+        val query = typed.orEmpty()
+        if (query.length < 2 || query.length > 40 || query.contains('\n')) {
+            if (query != dismissedQuery) dismissedQuery = null
             hideStrip()
             return
         }
-        if (typed == dismissedQuery) {
+        if (query == dismissedQuery) {
             hideStrip()
             return
         }
         dismissedQuery = null
-        currentQuery = typed
-        currentPackage = eventPackage
+        currentQuery = query
+        currentPackage = queryPackage
         queryJob?.cancel()
         queryJob = scope.launch {
             delay(180) // Wait for the IME to finish a burst of edits.
-            val suggestions = runCatching { repository.findSuggestions(typed) }
+            val suggestions = runCatching { repository.findSuggestions(query) }
                 .getOrDefault(emptyList())
-                .filter { it.content != typed }
-            if (currentQuery == typed && currentPackage == eventPackage &&
-                focusedText(eventPackage) == typed) {
-                showSuggestions(eventPackage, typed, suggestions)
+                .filter { it.content != query }
+            if (currentQuery == query && currentPackage == queryPackage &&
+                inputContextValid(queryPackage, query)) {
+                showSuggestions(queryPackage, query, suggestions)
             }
         }
     }
+
+    private fun AccessibilityEvent.kind(): SuggestionEventPolicy.Kind = when (eventType) {
+        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> SuggestionEventPolicy.Kind.TEXT
+        AccessibilityEvent.TYPE_VIEW_FOCUSED -> SuggestionEventPolicy.Kind.FOCUS
+        AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> SuggestionEventPolicy.Kind.WINDOW_STATE
+        AccessibilityEvent.TYPE_WINDOWS_CHANGED -> SuggestionEventPolicy.Kind.WINDOWS
+        AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> SuggestionEventPolicy.Kind.CONTENT
+        else -> SuggestionEventPolicy.Kind.OTHER
+    }
+
+    private fun keyboardVisible(): Boolean =
+        windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+
+    private fun inputContextValid(packageName: String, query: String): Boolean =
+        rootInActiveWindow?.packageName?.toString() == packageName &&
+            keyboardVisible() && focusedText(packageName) == query
 
     private fun focusedText(packageName: String): String? {
         val node = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
@@ -195,7 +223,7 @@ class QqSuggestionService : AccessibilityService() {
 
     private fun applySuggestion(packageName: String, query: String, item: ClipboardItem) {
         if (currentQuery != query || currentPackage != packageName ||
-            focusedText(packageName) != query) {
+            !inputContextValid(packageName, query)) {
             hideStrip()
             return
         }
