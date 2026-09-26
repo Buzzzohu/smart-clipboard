@@ -32,7 +32,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.smartclipboard.app.R
-import com.smartclipboard.app.suggestion.QqSuggestionSettings
+import com.smartclipboard.app.suggestion.SuggestionApp
+import com.smartclipboard.app.suggestion.SuggestionSettings
 
 /** Isolates the optional accessibility feature from clipboard management. */
 @Composable
@@ -40,13 +41,15 @@ fun SettingsScreen(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var enabled by remember { mutableStateOf(QqSuggestionSettings.isEnabled(context)) }
-    var connected by remember { mutableStateOf(QqSuggestionSettings.isServiceConnected(context)) }
+    var qqEnabled by remember { mutableStateOf(SuggestionSettings.isEnabled(context, SuggestionApp.QQ)) }
+    var heyboxEnabled by remember { mutableStateOf(SuggestionSettings.isEnabled(context, SuggestionApp.HEYBOX)) }
+    var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                enabled = QqSuggestionSettings.isEnabled(context)
-                connected = QqSuggestionSettings.isServiceConnected(context)
+                qqEnabled = SuggestionSettings.isEnabled(context, SuggestionApp.QQ)
+                heyboxEnabled = SuggestionSettings.isEnabled(context, SuggestionApp.HEYBOX)
+                connected = SuggestionSettings.isServiceConnected(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -70,26 +73,48 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(stringResource(R.string.qq_experiment_title), style = MaterialTheme.typography.titleMedium)
-                        Switch(checked = enabled, onCheckedChange = {
-                            enabled = it
-                            QqSuggestionSettings.setEnabled(context, it)
+                        Switch(checked = qqEnabled, onCheckedChange = {
+                            qqEnabled = it
+                            SuggestionSettings.setEnabled(context, SuggestionApp.QQ, it)
                         })
                     }
                     Text(
                         stringResource(when {
-                            enabled && connected -> R.string.qq_experiment_active
-                            enabled -> R.string.qq_experiment_waiting
+                            qqEnabled && connected -> R.string.qq_experiment_active
+                            qqEnabled -> R.string.qq_experiment_waiting
                             else -> R.string.qq_experiment_inactive
                         }),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }) { Text(stringResource(R.string.qq_accessibility_settings)) }
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.heybox_experiment_title),
+                            style = MaterialTheme.typography.titleMedium)
+                        Switch(checked = heyboxEnabled, onCheckedChange = {
+                            heyboxEnabled = it
+                            SuggestionSettings.setEnabled(context, SuggestionApp.HEYBOX, it)
+                        })
+                    }
+                    Text(
+                        stringResource(when {
+                            heyboxEnabled && connected -> R.string.heybox_experiment_active
+                            heyboxEnabled -> R.string.heybox_experiment_waiting
+                            else -> R.string.heybox_experiment_inactive
+                        }),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = {
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }) { Text(stringResource(R.string.qq_accessibility_settings)) }
         }
     }
 }

@@ -1,10 +1,10 @@
 # Smart Clipboard · 智能剪贴板助手
 
-一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入和 QQ 输入联想实验功能。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
+一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及 QQ 和小黑盒输入联想实验功能。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
 
-**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.8.9-overlay-fix.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
+**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.0-heybox.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
 
-> 当前版本：0.8.9。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+> 当前版本：0.9.0。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
 
 ## ✨ 功能
 
@@ -21,25 +21,25 @@
 - **搜索与筛选** — 按关键词查找内容；从屏幕左边缘右滑，打开分类和收藏筛选侧栏。
 - **快捷管理** — 点击卡片复制内容；卡片左滑可进行编辑、删除、收藏等操作。
 
-### 💬 QQ 输入联想（实验功能）
+### 💬 QQ 与小黑盒输入联想（实验功能）
 
-- **本地匹配** — 在 QQ 输入框输入至少 2 个字时，查找资料库中包含该内容的条目。
+- **本地匹配** — 在已启用应用的可编辑输入框输入至少 2 个字时，查找资料库中包含该内容的条目。
 - **滚动选择** — 在键盘上方显示浅色候选框，支持滚动浏览最多 20 条匹配结果；点击候选尝试填入当前输入框。
-- **独立开关** — 在应用“设置”中开启 QQ 输入联想，并在 Android 系统设置中启用对应无障碍服务；可随时关闭。
-- **适用范围** — 当前仅支持 QQ（`com.tencent.mobileqq`），不同 QQ 版本或输入法可能影响候选显示与插入。微信输入联想尚未实现。
+- **独立开关** — 在应用“设置”中分别控制 QQ 与小黑盒联想，并在 Android 系统设置中启用同一个 Smart Clipboard 无障碍服务。
+- **适用范围** — 当前允许 QQ（`com.tencent.mobileqq`）和小黑盒（`com.max.xiaoheihe`）。不同页面、版本或输入法可能影响候选显示与插入；小黑盒支持尚未经过手机实测。微信输入联想尚未实现。
 
 ## 📱 安装与使用
 
 1. 在 [Releases](https://github.com/Buzzzohu/smart-clipboard/releases) 下载最新 APK，在 Android 手机上安装。
 2. 复制一段文本后打开 Smart Clipboard；如弹出确认框，点击“保存到我的库”。
 3. 在首页搜索、筛选或管理条目；需要批量导入时，打开“手动导入”并选择“批量粘贴导入”。
-4. 如需体验 QQ 联想，在应用设置中打开开关，并按照页面入口启用 Android 无障碍服务。
+4. 如需体验输入联想，在设置中打开 QQ 或小黑盒开关，并按照页面入口启用 Android 无障碍服务。
 
 ## 🔒 数据与权限
 
 - 剪贴板资料库存放在设备本地，不需要账号或云同步，也不依赖第三方输入法。
 - 应用**不会在后台持续监听其他应用的复制动作**；读取当前剪贴板需要打开应用。
-- QQ 联想服务只针对 QQ 当前聚焦的非密码输入框进行本地匹配，不记录或上传输入文本。
+- 输入联想服务只针对已启用的 QQ 或小黑盒当前聚焦的非密码输入框进行本地匹配，不记录或上传输入文本。
 
 ## 🛠️ 开发与构建
 

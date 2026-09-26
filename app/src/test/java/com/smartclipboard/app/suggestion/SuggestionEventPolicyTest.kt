@@ -10,8 +10,8 @@ class SuggestionEventPolicyTest {
             SuggestionEventPolicy.Action.HIDE,
             SuggestionEventPolicy.decide(
                 kind = SuggestionEventPolicy.Kind.CONTENT,
-                eventFromQq = true,
-                activeQq = true,
+                eventFromSupportedApp = true,
+                activeSupportedApp = true,
                 inputFocused = false,
                 keyboardVisible = false,
                 overlayVisible = true
@@ -25,8 +25,8 @@ class SuggestionEventPolicyTest {
             SuggestionEventPolicy.Action.HIDE,
             SuggestionEventPolicy.decide(
                 kind = SuggestionEventPolicy.Kind.WINDOWS,
-                eventFromQq = false,
-                activeQq = true,
+                eventFromSupportedApp = false,
+                activeSupportedApp = true,
                 inputFocused = true,
                 keyboardVisible = false,
                 overlayVisible = true
@@ -40,8 +40,8 @@ class SuggestionEventPolicyTest {
             SuggestionEventPolicy.Action.QUERY,
             SuggestionEventPolicy.decide(
                 kind = SuggestionEventPolicy.Kind.TEXT,
-                eventFromQq = true,
-                activeQq = true,
+                eventFromSupportedApp = true,
+                activeSupportedApp = true,
                 inputFocused = true,
                 keyboardVisible = true,
                 overlayVisible = false
