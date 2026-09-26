@@ -54,6 +54,11 @@ class QqSuggestionService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // IMEs often mark layout containers as unimportant for spoken feedback.
+        // Include them so geometry matches the visible toolbar rather than only buttons.
+        serviceInfo = serviceInfo.apply {
+            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+        }
         SuggestionSettings.preferences(this).registerOnSharedPreferenceChangeListener(prefListener)
     }
 
