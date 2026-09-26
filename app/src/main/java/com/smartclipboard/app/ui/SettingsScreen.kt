@@ -62,9 +62,6 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var enabledApps by remember {
-        mutableStateOf(SuggestionApp.entries.associateWith { SuggestionSettings.isEnabled(context, it) })
-    }
     var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
     var fuzzyEnabled by remember { mutableStateOf(SuggestionSettings.isFuzzyEnabled(context)) }
     var stripSender by remember { mutableStateOf(ImportSettings.stripSender(context)) }
@@ -72,7 +69,6 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                enabledApps = SuggestionApp.entries.associateWith { SuggestionSettings.isEnabled(context, it) }
                 connected = SuggestionSettings.isServiceConnected(context)
                 fuzzyEnabled = SuggestionSettings.isFuzzyEnabled(context)
             }
@@ -90,39 +86,7 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
             }
             Spacer(Modifier.height(24.dp))
             if (appsPage) {
-                Text(stringResource(R.string.settings_description), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(10.dp))
-                SuggestionApp.entries.forEach { app ->
-                    val name = stringResource(when (app) {
-                        SuggestionApp.QQ -> R.string.suggestion_app_qq
-                        SuggestionApp.HEYBOX -> R.string.suggestion_app_heybox
-                        SuggestionApp.BILIBILI -> R.string.suggestion_app_bilibili
-                        SuggestionApp.DOUYIN -> R.string.suggestion_app_douyin
-                        SuggestionApp.JMCOMIC2 -> R.string.suggestion_app_jmcomic2
-                        SuggestionApp.JMCOMIC3 -> R.string.suggestion_app_jmcomic3
-                    })
-                    val enabled = enabledApps[app] == true
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stringResource(R.string.suggestion_app_title, name), Modifier.weight(1f),
-                                    style = MaterialTheme.typography.titleMedium)
-                                Switch(checked = enabled, onCheckedChange = {
-                                    SuggestionSettings.setEnabled(context, app, it)
-                                    enabledApps = enabledApps + (app to it)
-                                })
-                            }
-                            Text(stringResource(when {
-                                enabled && connected -> R.string.suggestion_app_active
-                                enabled -> R.string.qq_experiment_waiting
-                                else -> R.string.suggestion_app_inactive
-                            }, name), style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                }
+                SuggestionAppsSection(connected)
             } else {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {

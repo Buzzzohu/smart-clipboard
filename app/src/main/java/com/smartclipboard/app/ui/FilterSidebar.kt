@@ -119,7 +119,6 @@ fun BoxScope.FilterSidebar(
             shadowElevation = 0.dp
         ) {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-              Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(20.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Smart Clipboard", Modifier.weight(1f),
@@ -129,6 +128,7 @@ fun BoxScope.FilterSidebar(
                             contentDescription = stringResource(R.string.close), tint = sidebarText)
                     }
                 }
+              Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(28.dp))
                 SidebarHeading("资料库")
                 FilterOption(stringResource(R.string.filter_all), category == null, R.drawable.ic_sidebar_library) { onCategory(null) }

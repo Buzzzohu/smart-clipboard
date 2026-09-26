@@ -63,6 +63,9 @@ interface ClipboardItemDao {
     @Query("DELETE FROM ClipboardItem WHERE id = :id")
     suspend fun deleteById(id: Long): Int
 
+    @Query("DELETE FROM ClipboardItem WHERE id IN (:ids)")
+    suspend fun deleteSelected(ids: List<Long>): Int
+
     @Query("UPDATE ClipboardItem SET favorite = CASE favorite WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun toggleFavorite(id: Long): Int
 

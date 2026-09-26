@@ -75,6 +75,9 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     var noticeId by remember { mutableLongStateOf(0L) }
     var selectedIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var choosingCategory by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Set<Long>?>(null) }
+    var deletingSelection by remember { mutableStateOf(false) }
+    val actionScope = androidx.compose.runtime.rememberCoroutineScope()
     var bulkCategoryId by remember { mutableStateOf(1L) }
     LaunchedEffect(category, categories) {
         if (category != null && categories.isNotEmpty() && categories.none { it.name == category }) viewModel.setCategory(null)
@@ -162,6 +165,9 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                                 TextButton(onClick = { selectedIds = emptySet() }) { Text("取消") }
                                 TextButton(onClick = { choosingCategory = true }) { Text("改分类") }
                             }
+                            TextButton(onClick = { pendingDelete = selectedIds.toSet() }) {
+                                Text("删除所选（${selectedIds.size}）", color = MaterialTheme.colorScheme.error)
+                            }
                         }
                         if (entries.isEmpty()) {
                             Text(
@@ -234,6 +240,22 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
             )
         }
 
+        pendingDelete?.let { ids ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { if (!deletingSelection) pendingDelete = null },
+                title = { Text("删除 ${ids.size} 条内容？") },
+                text = { Text("删除后无法恢复。") },
+                confirmButton = { TextButton(enabled = !deletingSelection, onClick = {
+                    deletingSelection = true
+                    actionScope.launch {
+                        try {
+                            if (viewModel.deleteItems(ids)) { selectedIds = selectedIds - ids; pendingDelete = null }
+                        } finally { deletingSelection = false }
+                    }
+                }) { Text(if (deletingSelection) "删除中…" else "删除", color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton(enabled = !deletingSelection, onClick = { pendingDelete = null }) { Text("取消") } }
+            )
+        }
         if (choosingCategory) {
             androidx.compose.material3.AlertDialog(onDismissRequest = { choosingCategory = false },
                 title = { Text("移动 ${selectedIds.size} 条内容") },

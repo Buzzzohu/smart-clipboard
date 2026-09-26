@@ -56,5 +56,20 @@ assert.equal(db.prepare('SELECT count(*) AS n FROM ClipboardItem').get().n, befo
 assert.equal(db.prepare('SELECT category FROM ClipboardItem WHERE id=4').get().category, uncategorized);
 assert.throws(() => db.prepare('INSERT INTO LibraryCategory(name, iconFile) VALUES(?, NULL)').run(uncategorized));
 assert.equal(db.prepare('SELECT count(*) AS n FROM ClipboardItem i LEFT JOIN LibraryCategory c ON i.category=c.name WHERE c.id IS NULL').get().n, 0);
+// Batch deletion uses real DAO SQL with synthetic IDs; unrelated rows must survive.
+for (let i = 0; i < 1005; i++) insert.run(`bulk fixture ${i}`, uncategorized, 'fixture');
+const allRows = db.prepare('SELECT * FROM ClipboardItem ORDER BY id').all();
+const selected = allRows.filter((_, index) => index % 5 !== 0).map(row => row.id);
+const selectedSet = new Set(selected);
+const deleteChunk = ids => db.prepare(queryFor('deleteSelected').replace(':ids', ids.map(() => '?').join(','))).run(...ids);
+db.exec('BEGIN');
+deleteChunk(selected.slice(0, 400));
+db.exec('ROLLBACK');
+assert.deepEqual(db.prepare('SELECT * FROM ClipboardItem ORDER BY id').all(), allRows);
+db.exec('BEGIN');
+for (let i = 0; i < selected.length; i += 400) deleteChunk(selected.slice(i, i + 400));
+db.exec('COMMIT');
+assert.deepEqual(db.prepare('SELECT * FROM ClipboardItem ORDER BY id').all(), allRows.filter(row => !selectedSet.has(row.id)));
 db.close(); fresh.close();
+console.log('PASS: multi-chunk selected deletion, rollback, preservation of unselected records.');
 console.log('PASS: v2 -> v3 data preservation, generated schema parity, legacy categories, rename, delete/reassign, uniqueness.');

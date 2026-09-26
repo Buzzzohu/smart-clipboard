@@ -72,6 +72,10 @@ class ClipboardRepository(private val database: ClipboardDatabase) {
 
     suspend fun delete(id: Long): Boolean = dao.deleteById(id) > 0
 
+    suspend fun deleteItems(ids: Set<Long>): Int = database.withTransaction {
+        ids.toList().chunked(400).sumOf { dao.deleteSelected(it) }
+    }
+
     suspend fun toggleFavorite(id: Long): Boolean = dao.toggleFavorite(id) > 0
 
     suspend fun recordUse(id: Long): Boolean = dao.recordUse(id, System.currentTimeMillis()) > 0

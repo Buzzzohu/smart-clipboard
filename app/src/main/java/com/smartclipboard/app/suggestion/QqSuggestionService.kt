@@ -62,9 +62,8 @@ class QqSuggestionService : AccessibilityService() {
             // Leave transition-hidden panels hidden; apply the setting when they become visible.
             strip?.takeIf { it.alpha > 0f }?.alpha = SuggestionSettings.overlayOpacity(this)
         }
-        val currentApp = SuggestionApp.fromPackage(currentPackage)
         if (key == SuggestionSettings.KEY_FUZZY_ENABLED ||
-            (currentApp != null && !SuggestionSettings.isEnabled(this, currentApp))) hideStrip()
+            (currentPackage != null && !SuggestionSettings.isEnabled(this, currentPackage))) hideStrip()
     }
 
     override fun onServiceConnected() {
@@ -89,16 +88,12 @@ class QqSuggestionService : AccessibilityService() {
             )) return
         val eventPackage = event.packageName?.toString()
         val activePackage = rootInActiveWindow?.packageName?.toString()
-        val activeApp = SuggestionApp.fromPackage(activePackage)
-        if (activeApp != null && !SuggestionSettings.isEnabled(this, activeApp)) {
-            hideStrip()
-            return
-        }
-        val typed = activeApp?.let { focusedText(it.packageName) }
+        val activeEnabled = SuggestionSettings.isEnabled(this, activePackage)
+        val typed = activePackage?.takeIf { activeEnabled }?.let { focusedText(it) }
         val action = SuggestionEventPolicy.decide(
             kind = kind,
-            eventFromSupportedApp = activeApp != null && eventPackage == activePackage,
-            activeSupportedApp = activeApp != null,
+            eventFromSupportedApp = activeEnabled && eventPackage == activePackage,
+            activeSupportedApp = activeEnabled,
             inputFocused = typed != null,
             keyboardVisible = keyboardVisible(),
             overlayVisible = strip != null
@@ -170,7 +165,7 @@ class QqSuggestionService : AccessibilityService() {
         windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
 
     private fun inputContextValid(packageName: String, query: String): Boolean =
-        SuggestionApp.fromPackage(packageName)?.let { SuggestionSettings.isEnabled(this, it) } == true &&
+        SuggestionSettings.isEnabled(this, packageName) &&
             rootInActiveWindow?.packageName?.toString() == packageName &&
             keyboardVisible() && focusedEditor(packageName)?.let {
                 it.windowId == currentEditorWindowId && it.text?.toString()?.trim() == query
@@ -180,7 +175,7 @@ class QqSuggestionService : AccessibilityService() {
         focusedEditor(packageName)?.text?.toString()?.trim()
 
     private fun focusedEditor(packageName: String): AccessibilityNodeInfo? {
-        if (SuggestionApp.fromPackage(packageName) == null) return null
+        if (!SuggestionSettings.isEnabled(this, packageName)) return null
         val roots = sequence {
             rootInActiveWindow?.let { yield(it) }
             windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && it.isFocused }

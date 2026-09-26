@@ -34,6 +34,12 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     val categories = repository.categoryList.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     suspend fun saveCategory(id: Long?, name: String, icon: String?) = repository.saveCategory(id, name, icon)
     suspend fun deleteCategory(id: Long) { repository.deleteCategory(id); mutableCategory.value = null }
+    suspend fun deleteItems(ids: Set<Long>): Boolean = try {
+        repository.deleteItems(ids)
+        mutableMessages.emit(LibraryMessage.Deleted)
+        true
+    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+      catch (_: Exception) { mutableMessages.emit(LibraryMessage.Failed); false }
     fun moveItems(ids: Set<Long>, categoryId: Long) {
         viewModelScope.launch {
             try { repository.moveItems(ids, categoryId); mutableMessages.emit(LibraryMessage.Edited) }

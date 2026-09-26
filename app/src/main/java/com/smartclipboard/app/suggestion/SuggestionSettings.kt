@@ -11,6 +11,42 @@ internal object SuggestionSettings {
     private const val KEY_HEYBOX_ENABLED = "heybox_enabled"
     const val KEY_FUZZY_ENABLED = "fuzzy_enabled"
     const val KEY_OVERLAY_OPACITY = "overlay_opacity"
+    private const val CUSTOM_APPS = "custom_apps"
+
+    fun customPackages(context: Context): Set<String> =
+        preferences(context).getStringSet(CUSTOM_APPS, emptySet()).orEmpty().toSet()
+
+    fun appLabel(context: Context, packageName: String): String =
+        preferences(context).getString("label:$packageName", packageName) ?: packageName
+
+    fun addApp(context: Context, packageName: String, label: String) {
+        require(packageName != context.packageName && packageName.isNotBlank())
+        if (SuggestionApp.fromPackage(packageName) != null) return
+        preferences(context).edit()
+            .putStringSet(CUSTOM_APPS, customPackages(context) + packageName)
+            .putString("label:$packageName", label)
+            .putBoolean("app:$packageName", true).apply()
+    }
+
+    fun removeApp(context: Context, packageName: String) {
+        preferences(context).edit()
+            .putStringSet(CUSTOM_APPS, customPackages(context) - packageName)
+            .remove("label:$packageName").remove("app:$packageName").apply()
+    }
+
+    fun isEnabled(context: Context, packageName: String?): Boolean {
+        if (packageName == null || packageName == context.packageName) return false
+        val preset = SuggestionApp.fromPackage(packageName)
+        return if (preset != null) isEnabled(context, preset)
+        else packageName in customPackages(context) && preferences(context).getBoolean("app:$packageName", false)
+    }
+
+    fun setEnabled(context: Context, packageName: String, enabled: Boolean) {
+        val preset = SuggestionApp.fromPackage(packageName)
+        if (preset != null) setEnabled(context, preset, enabled)
+        else if (packageName in customPackages(context))
+            preferences(context).edit().putBoolean("app:$packageName", enabled).apply()
+    }
 
     fun overlayOpacity(context: Context): Float =
         preferences(context).getFloat(KEY_OVERLAY_OPACITY, 1f).coerceIn(0.2f, 1f)
@@ -34,7 +70,8 @@ internal object SuggestionSettings {
     }
 
     fun isAnyEnabled(context: Context): Boolean =
-        SuggestionApp.entries.any { isEnabled(context, it) }
+        SuggestionApp.entries.any { isEnabled(context, it) } ||
+            customPackages(context).any { isEnabled(context, it) }
 
     fun isServiceConnected(context: Context): Boolean {
         val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
