@@ -12,7 +12,7 @@ data class ClipboardItem(
     val content: String,
     val createdTime: Long,
     val updatedTime: Long,
-    val category: String = "文本",
+    val category: String = UNCATEGORIZED,
     val tags: String = "",
     val favorite: Boolean = false,
     val useCount: Int = 0,

@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ClipboardItemDao {
+    @Query("UPDATE ClipboardItem SET category = :newName WHERE category = :oldName")
+    suspend fun renameCategory(oldName: String, newName: String)
+
+    @Query("UPDATE ClipboardItem SET category = :category, updatedTime = :time WHERE id IN (:ids)")
+    suspend fun moveToCategory(ids: List<Long>, category: String, time: Long): Int
     /** instr searches for literal substrings, so %, _ and Chinese text work as entered. */
     @Query("""
         SELECT * FROM ClipboardItem

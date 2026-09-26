@@ -10,6 +10,14 @@ internal object SuggestionSettings {
     private const val KEY_QQ_ENABLED = "enabled"
     private const val KEY_HEYBOX_ENABLED = "heybox_enabled"
     const val KEY_FUZZY_ENABLED = "fuzzy_enabled"
+    const val KEY_OVERLAY_OPACITY = "overlay_opacity"
+
+    fun overlayOpacity(context: Context): Float =
+        preferences(context).getFloat(KEY_OVERLAY_OPACITY, 1f).coerceIn(0.2f, 1f)
+
+    fun setOverlayOpacity(context: Context, opacity: Float) {
+        preferences(context).edit().putFloat(KEY_OVERLAY_OPACITY, opacity.coerceIn(0.2f, 1f)).apply()
+    }
 
     fun isFuzzyEnabled(context: Context): Boolean =
         preferences(context).getBoolean(KEY_FUZZY_ENABLED, true)
@@ -42,5 +50,7 @@ internal object SuggestionSettings {
         SuggestionApp.HEYBOX -> KEY_HEYBOX_ENABLED
         SuggestionApp.BILIBILI -> "bilibili_enabled"
         SuggestionApp.DOUYIN -> "douyin_enabled"
+        SuggestionApp.JMCOMIC2 -> "jmcomic2_enabled"
+        SuggestionApp.JMCOMIC3 -> "jmcomic3_enabled"
     }
 }

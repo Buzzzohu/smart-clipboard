@@ -11,6 +11,8 @@ class SuggestionAppTest {
         assertEquals(SuggestionApp.HEYBOX, SuggestionApp.fromPackage("com.max.xiaoheihe"))
         assertEquals(SuggestionApp.BILIBILI, SuggestionApp.fromPackage("tv.danmaku.bili"))
         assertEquals(SuggestionApp.DOUYIN, SuggestionApp.fromPackage("com.ss.android.ugc.aweme"))
+        assertEquals(SuggestionApp.JMCOMIC2, SuggestionApp.fromPackage("com.jiaohua_browser"))
+        assertEquals(SuggestionApp.JMCOMIC3, SuggestionApp.fromPackage("com.a7m3p9xv.t6qk2z8.app"))
         assertNull(SuggestionApp.fromPackage("com.tencent.mm"))
         assertNull(SuggestionApp.fromPackage(null))
     }

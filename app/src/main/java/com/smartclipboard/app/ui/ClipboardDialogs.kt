@@ -19,19 +19,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.smartclipboard.app.R
 import com.smartclipboard.app.clipboard.ClipboardStatus
+import com.smartclipboard.app.data.LibraryCategory
 
 @Composable
 fun SaveConfirmationDialog(
     candidate: ClipboardStatus.Candidate,
-    onSave: () -> Unit,
+    categories: List<LibraryCategory>,
+    onSave: (Long) -> Unit,
     onIgnore: () -> Unit
 ) {
     var expanded by rememberSaveable(candidate.content) { mutableStateOf(false) }
+    var categoryId by rememberSaveable(candidate.content) { mutableStateOf(1L) }
     AlertDialog(
         onDismissRequest = { if (!candidate.isSaving) onIgnore() },
         title = { Text(stringResource(R.string.save_dialog_title)) },
         text = {
             Column(modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
+                CategoryPicker(categories, categoryId, enabled = !candidate.isSaving) { categoryId = it }
                 Text(
                     text = candidate.content,
                     maxLines = if (expanded) Int.MAX_VALUE else 5,
@@ -45,7 +49,7 @@ fun SaveConfirmationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onSave, enabled = !candidate.isSaving) {
+            TextButton(onClick = { onSave(categoryId) }, enabled = !candidate.isSaving) {
                 Text(stringResource(R.string.save_to_library))
             }
         },
@@ -63,16 +67,20 @@ fun EntryEditorDialog(
     title: String,
     initialContent: String,
     initialTags: String,
+    categories: List<LibraryCategory>,
+    initialCategoryId: Long = 1,
     onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
+    onConfirm: (String, String, Long) -> Unit
 ) {
     var content by rememberSaveable(initialContent) { mutableStateOf(initialContent) }
     var tags by rememberSaveable(initialTags) { mutableStateOf(initialTags) }
+    var categoryId by rememberSaveable(initialCategoryId) { mutableStateOf(initialCategoryId) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
             Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                CategoryPicker(categories, categoryId) { categoryId = it }
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
@@ -89,7 +97,7 @@ fun EntryEditorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(content.trim(), tags.trim()) }, enabled = content.isNotBlank()) {
+            TextButton(onClick = { onConfirm(content.trim(), tags.trim(), categoryId) }, enabled = content.isNotBlank()) {
                 Text(stringResource(R.string.save_item))
             }
         },
@@ -100,14 +108,16 @@ fun EntryEditorDialog(
 }
 
 @Composable
-fun BatchImportDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun BatchImportDialog(categories: List<LibraryCategory>, onDismiss: () -> Unit, onConfirm: (String, Long) -> Unit) {
     var pastedText by rememberSaveable { mutableStateOf("") }
+    var categoryId by rememberSaveable { mutableStateOf(1L) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.batch_import_title)) },
         text = {
             Column(modifier = Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.batch_import_hint))
+                CategoryPicker(categories, categoryId) { categoryId = it }
                 OutlinedTextField(
                     value = pastedText,
                     onValueChange = { pastedText = it },
@@ -118,7 +128,7 @@ fun BatchImportDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(pastedText) }, enabled = pastedText.isNotBlank()) {
+            TextButton(onClick = { onConfirm(pastedText, categoryId) }, enabled = pastedText.isNotBlank()) {
                 Text(stringResource(R.string.batch_import_button))
             }
         },

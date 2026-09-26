@@ -18,6 +18,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Slider
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.Surface
+import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,22 +42,28 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ImportSettings
+import com.smartclipboard.app.clipboard.ClipboardViewModel
 import com.smartclipboard.app.suggestion.SuggestionApp
 import com.smartclipboard.app.suggestion.SuggestionSettings
 
 /** Each supported app opts in separately; all switches share the existing service. */
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(viewModel: ClipboardViewModel, onBack: () -> Unit) {
     var showApps by rememberSaveable { mutableStateOf(false) }
+    var showCategories by rememberSaveable { mutableStateOf(false) }
+    if (showCategories) {
+        CategoryManagerScreen(viewModel) { showCategories = false }
+        return
+    }
     val navigateBack: () -> Unit = { if (showApps) showApps = false else onBack() }
     // Separate page instances keep scrolling and system Back behavior independent.
     key(showApps) {
-        SettingsPage(showApps, navigateBack, onOpenApps = { showApps = true })
+        SettingsPage(showApps, navigateBack, onOpenApps = { showApps = true }, onOpenCategories = { showCategories = true })
     }
 }
 
 @Composable
-private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -> Unit) {
+private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -> Unit, onOpenCategories: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -63,6 +73,7 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
     var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
     var fuzzyEnabled by remember { mutableStateOf(SuggestionSettings.isFuzzyEnabled(context)) }
     var stripSender by remember { mutableStateOf(ImportSettings.stripSender(context)) }
+    var overlayOpacity by remember { mutableStateOf(SuggestionSettings.overlayOpacity(context)) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -92,6 +103,8 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
                         SuggestionApp.HEYBOX -> R.string.suggestion_app_heybox
                         SuggestionApp.BILIBILI -> R.string.suggestion_app_bilibili
                         SuggestionApp.DOUYIN -> R.string.suggestion_app_douyin
+                        SuggestionApp.JMCOMIC2 -> R.string.suggestion_app_jmcomic2
+                        SuggestionApp.JMCOMIC3 -> R.string.suggestion_app_jmcomic3
                     })
                     val enabled = enabledApps[app] == true
                     Card(Modifier.fillMaxWidth()) {
@@ -116,6 +129,36 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
                     Spacer(Modifier.height(12.dp))
                 }
             } else {
+                Card(onClick = onOpenCategories, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("分类管理  ›", style = MaterialTheme.typography.titleMedium)
+                        Text("新建分类、修改名称与图标", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("悬浮窗透明度  ${((1f - overlayOpacity) * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.titleMedium)
+                        Text("向右滑动更透明，文字和背景一起调整",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Slider(value = 1f - overlayOpacity, valueRange = 0f..0.8f,
+                            onValueChange = {
+                                overlayOpacity = 1f - it
+                                SuggestionSettings.setOverlayOpacity(context, overlayOpacity)
+                            })
+                        Surface(Modifier.fillMaxWidth().alpha(overlayOpacity),
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surface) {
+                            Text("📋 候选内容预览", Modifier.padding(14.dp))
+                        }
+                        Text("0% 不透明 · 80% 更透明", Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -56,6 +56,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     val context = LocalContext.current
     val status by viewModel.state.collectAsStateWithLifecycle()
     val entries by viewModel.items.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val category by viewModel.category.collectAsStateWithLifecycle()
     val favoritesOnly by viewModel.favoritesOnly.collectAsStateWithLifecycle()
@@ -71,6 +72,14 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     var revealedId by remember { mutableStateOf<Long?>(null) }
     var notice by remember { mutableStateOf<Notice?>(null) }
     var noticeId by remember { mutableLongStateOf(0L) }
+    var selectedIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var choosingCategory by remember { mutableStateOf(false) }
+    var bulkCategoryId by remember { mutableStateOf(1L) }
+    LaunchedEffect(category, categories) {
+        if (category != null && categories.isNotEmpty() && categories.none { it.name == category }) viewModel.setCategory(null)
+    }
+    LaunchedEffect(entries) { selectedIds = selectedIds.intersect(entries.map { it.id }.toSet()) }
+    BackHandler(selectedIds.isNotEmpty()) { selectedIds = emptySet() }
 
     LaunchedEffect(viewModel) {
         launch {
@@ -92,7 +101,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
     }
 
     if (showSettings) {
-        SettingsScreen(onBack = { showSettings = false })
+        SettingsScreen(viewModel, onBack = { showSettings = false })
     } else {
         BackHandler(filterOpen) { filterOpen = false }
         Box(Modifier.fillMaxSize()) {
@@ -143,6 +152,14 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                         Text(stringResource(R.string.saved_count, entries.size),
                             style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(10.dp))
+                        if (selectedIds.isNotEmpty()) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("已选 ${selectedIds.size}", Modifier.weight(1f))
+                                TextButton(onClick = { selectedIds = entries.map { it.id }.toSet() }) { Text("全选") }
+                                TextButton(onClick = { selectedIds = emptySet() }) { Text("取消") }
+                                TextButton(onClick = { choosingCategory = true }) { Text("改分类") }
+                            }
+                        }
                         if (entries.isEmpty()) {
                             Text(
                                 stringResource(if (query.isBlank() && category == null && !favoritesOnly)
@@ -162,8 +179,13 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                                         revealed = revealedId == item.id,
                                         onReveal = { revealedId = item.id },
                                         onClose = { revealedId = null },
+                                        selected = item.id in selectedIds,
+                                        selectionMode = selectedIds.isNotEmpty(),
+                                        onLongPress = { revealedId = null; selectedIds = selectedIds + item.id },
                                         onCardTap = {
-                                            if (revealedId != null) revealedId = null
+                                            if (selectedIds.isNotEmpty()) {
+                                                selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
+                                            } else if (revealedId != null) revealedId = null
                                             else viewModel.copy(item)
                                         },
                                         onEdit = { editing = item },
@@ -190,6 +212,7 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
             }
             FilterSidebar(
                 visible = filterOpen,
+                categories = categories,
                 category = category,
                 favoritesOnly = favoritesOnly,
                 onOpen = { revealedId = null; filterOpen = true },
@@ -207,6 +230,16 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
             )
         }
 
+        if (choosingCategory) {
+            androidx.compose.material3.AlertDialog(onDismissRequest = { choosingCategory = false },
+                title = { Text("移动 ${selectedIds.size} 条内容") },
+                text = { CategoryPicker(categories, bulkCategoryId) { bulkCategoryId = it } },
+                confirmButton = { TextButton(onClick = {
+                    viewModel.moveItems(selectedIds, bulkCategoryId)
+                    selectedIds = emptySet(); choosingCategory = false
+                }) { Text("确定") } },
+                dismissButton = { TextButton(onClick = { choosingCategory = false }) { Text("取消") } })
+        }
         if (showManualSheet) {
             ModalBottomSheet(onDismissRequest = { showManualSheet = false }) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
@@ -230,25 +263,27 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
             }
         }
         if (status is ClipboardStatus.Candidate) {
-            SaveConfirmationDialog(status as ClipboardStatus.Candidate, viewModel::save, viewModel::ignore)
+            SaveConfirmationDialog(status as ClipboardStatus.Candidate, categories, viewModel::save, viewModel::ignore)
         }
         if (showManualEntry) {
             EntryEditorDialog(
                 title = stringResource(R.string.single_manual_entry),
                 initialContent = "",
                 initialTags = "",
+                categories = categories,
                 onDismiss = { showManualEntry = false },
-                onConfirm = { content, tags ->
-                    viewModel.addManual(content, tags)
+                onConfirm = { content, tags, categoryId ->
+                    viewModel.addManual(content, tags, categoryId)
                     showManualEntry = false
                 }
             )
         }
         if (showBatchEntry) {
             BatchImportDialog(
+                categories = categories,
                 onDismiss = { showBatchEntry = false },
-                onConfirm = { text ->
-                    viewModel.importBatch(text)
+                onConfirm = { text, categoryId ->
+                    viewModel.importBatch(text, categoryId)
                     showBatchEntry = false
                 }
             )
@@ -258,9 +293,11 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
                 title = stringResource(R.string.edit_item),
                 initialContent = item.content,
                 initialTags = item.tags,
+                categories = categories,
+                initialCategoryId = categories.firstOrNull { it.name == item.category }?.id ?: 1L,
                 onDismiss = { editing = null },
-                onConfirm = { content, tags ->
-                    viewModel.edit(item.id, content, tags)
+                onConfirm = { content, tags, categoryId ->
+                    viewModel.edit(item.id, content, tags, categoryId)
                     editing = null
                 }
             )

@@ -29,8 +29,17 @@ import kotlinx.coroutines.launch
 class ClipboardViewModel(application: Application) : AndroidViewModel(application) {
     private val reader = ClipboardTextReader(application)
     private val repository = ClipboardRepository(
-        ClipboardDatabase.getInstance(application).clipboardItemDao()
+        ClipboardDatabase.getInstance(application)
     )
+    val categories = repository.categoryList.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    suspend fun saveCategory(id: Long?, name: String, icon: String?) = repository.saveCategory(id, name, icon)
+    suspend fun deleteCategory(id: Long) { repository.deleteCategory(id); mutableCategory.value = null }
+    fun moveItems(ids: Set<Long>, categoryId: Long) {
+        viewModelScope.launch {
+            try { repository.moveItems(ids, categoryId); mutableMessages.emit(LibraryMessage.Edited) }
+            catch (_: Exception) { mutableMessages.emit(LibraryMessage.Failed) }
+        }
+    }
     private val clipboard = application.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     private val mutableState = MutableStateFlow<ClipboardStatus>(ClipboardStatus.Empty)
     val state = mutableState.asStateFlow()
@@ -53,13 +62,6 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var lastHandledContent: String? = null
     private var readVersion = 0
-
-    init {
-        viewModelScope.launch {
-            // Existing rows remain readable even if a metadata update fails.
-            runCatching { repository.reclassifyExisting() }
-        }
-    }
 
     fun refresh(passive: Boolean = false) {
         if ((mutableState.value as? ClipboardStatus.Candidate)?.isSaving == true) return
@@ -114,7 +116,7 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         updateStatus(ClipboardStatus.IgnoredByUser(candidate.content), R.string.clipboard_ignored_by_user)
     }
 
-    fun save() {
+    fun save(categoryId: Long = 1) {
         val candidate = mutableState.value as? ClipboardStatus.Candidate ?: return
         if (candidate.isSaving) return
         val content = candidate.content
@@ -122,7 +124,7 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         mutableState.value = candidate.copy(isSaving = true)
         viewModelScope.launch {
             try {
-                val inserted = repository.save(content)
+                val inserted = repository.save(content, categoryId = categoryId)
                 lastHandledContent = content
                 if (version == readVersion) {
                     if (inserted) updateStatus(ClipboardStatus.Saved(content), R.string.clipboard_saved)
@@ -135,11 +137,11 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /** Manual entry intentionally bypasses the automatic letters/digits filter. */
-    fun addManual(content: String, tags: String) {
+    fun addManual(content: String, tags: String, categoryId: Long = 1) {
         val prepared = ImportTextCleaner.clean(content, ImportSettings.stripSender(getApplication()))
         viewModelScope.launch {
             val message = try {
-                if (repository.save(prepared, tags)) LibraryMessage.Saved
+                if (repository.save(prepared, tags, categoryId)) LibraryMessage.Saved
                 else LibraryMessage.Duplicate
             } catch (_: Exception) {
                 LibraryMessage.Failed
@@ -148,11 +150,11 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun importBatch(raw: String) {
+    fun importBatch(raw: String, categoryId: Long = 1) {
         val stripSender = ImportSettings.stripSender(getApplication())
         viewModelScope.launch {
             val message = try {
-                val result = repository.importBatch(raw, stripSender)
+                val result = repository.importBatch(raw, stripSender, categoryId)
                 LibraryMessage.BatchImported(result.added, result.skipped)
             } catch (_: Exception) {
                 LibraryMessage.Failed
@@ -161,10 +163,10 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun edit(id: Long, content: String, tags: String) {
+    fun edit(id: Long, content: String, tags: String, categoryId: Long = 1) {
         viewModelScope.launch {
             val message = try {
-                if (repository.edit(id, content, tags)) LibraryMessage.Edited
+                if (repository.edit(id, content, tags, categoryId)) LibraryMessage.Edited
                 else LibraryMessage.DuplicateOrMissing
             } catch (_: Exception) {
                 LibraryMessage.Failed

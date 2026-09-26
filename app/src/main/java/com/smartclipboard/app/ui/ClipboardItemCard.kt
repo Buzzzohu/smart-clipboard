@@ -4,6 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,12 +60,16 @@ import kotlinx.coroutines.launch
 
 /** Only one row is revealed at a time; the host owns that shared state. */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun ClipboardItemCard(
     item: ClipboardItem,
     revealed: Boolean,
     onReveal: () -> Unit,
     onClose: () -> Unit,
     onCardTap: () -> Unit,
+    selected: Boolean = false,
+    selectionMode: Boolean = false,
+    onLongPress: () -> Unit = {},
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onFavorite: () -> Unit,
@@ -104,7 +111,8 @@ fun ClipboardItemCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset((if (dragging) dragOffset else settledOffset.value).roundToInt(), 0) }
-                .pointerInput(item.id, revealed) {
+                .pointerInput(item.id, revealed, selectionMode) {
+                    if (selectionMode) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragStart = {
                             velocityTracker.resetTracking()
@@ -142,7 +150,8 @@ fun ClipboardItemCard(
                         }
                     )
                 }
-                .clickable(onClick = onCardTap),
+                .combinedClickable(onClick = onCardTap, onLongClick = onLongPress),
+            border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 0.dp,
@@ -164,7 +173,7 @@ fun ClipboardItemCard(
                     }
                     if (item.favorite) Text("  ★", color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onExpand) { Text(stringResource(R.string.expand_content)) }
+                    TextButton(onClick = onExpand, enabled = !selectionMode) { Text(stringResource(R.string.expand_content)) }
                 }
                 if (item.tags.isNotBlank()) {
                     Text(item.tags, maxLines = 1, overflow = TextOverflow.Ellipsis,

@@ -3,7 +3,7 @@
     <string name="strip_sender_title">移除开头的 @昵称</string>
     <string name="strip_sender_description">导入时去掉开头的“@昵称: ”或“@昵称：”，批量导入逐行处理。默认开启，仅影响新导入内容。</string>
     <string name="app_suggestions_menu">应用联想</string>
-    <string name="app_suggestions_menu_description">管理 QQ、小黑盒、bilibili 和抖音的联想开关</string>
+    <string name="app_suggestions_menu_description">管理 QQ、小黑盒、bilibili、抖音和 JMComic 的联想开关</string>
     <string name="app_name">Smart Clipboard</string>
     <string name="import_instruction">复制文本后打开应用，或点击按钮读取当前剪贴板。</string>
     <string name="clipboard_ignored_by_rule">纯数字或英文字母内容已自动忽略。</string>
@@ -48,11 +48,13 @@
     <string name="batch_import_label">每行一条内容</string>
     <string name="batch_import_result">已导入 %1$d 条，跳过 %2$d 条。</string>
     <string name="qq_service_name">Smart Clipboard · 输入联想</string>
-    <string name="qq_service_description">仅在已启用的 QQ、小黑盒、bilibili 或抖音可编辑输入框中读取当前输入，用本地剪贴板库显示补全候选；不会记录或上传输入内容。可随时关闭。</string>
+    <string name="qq_service_description">仅在已启用的 QQ、小黑盒、bilibili、抖音、JMComic2 或 JMComic3 可编辑输入框中读取当前输入，用本地剪贴板库显示补全候选；不会记录或上传输入内容。可随时关闭。</string>
     <string name="suggestion_app_qq">QQ</string>
     <string name="suggestion_app_heybox">小黑盒</string>
     <string name="suggestion_app_bilibili">bilibili</string>
     <string name="suggestion_app_douyin">抖音</string>
+    <string name="suggestion_app_jmcomic2">JMComic2</string>
+    <string name="suggestion_app_jmcomic3">JMComic3</string>
     <string name="suggestion_app_title">%1$s 输入联想</string>
     <string name="fuzzy_search_title">无匹配时模糊联想</string>
     <string name="fuzzy_search_description">输入至少 4 个字且没有普通候选时，尝试按原顺序跳字匹配或纠正一处输入错误，最多显示 5 条相似结果。</string>

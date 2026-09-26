@@ -18,6 +18,13 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.ImageView
+import android.graphics.Bitmap
+import android.graphics.Outline
+import android.view.View
+import android.view.ViewOutlineProvider
+import com.smartclipboard.app.data.CategoryIcons
+import kotlinx.coroutines.flow.first
 import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ClipboardDatabase
 import com.smartclipboard.app.data.ClipboardItem
@@ -36,7 +43,7 @@ import kotlinx.coroutines.launch
 class QqSuggestionService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val repository by lazy {
-        ClipboardRepository(ClipboardDatabase.getInstance(this).clipboardItemDao())
+        ClipboardRepository(ClipboardDatabase.getInstance(this))
     }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var queryJob: Job? = null
@@ -49,6 +56,10 @@ class QqSuggestionService : AccessibilityService() {
     private var dismissedSuggestion: Pair<String, String>? = null
     // Keep this service component name stable so existing Android accessibility approval survives upgrades.
     private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == SuggestionSettings.KEY_OVERLAY_OPACITY) {
+            // Leave transition-hidden panels hidden; apply the setting when they become visible.
+            strip?.takeIf { it.alpha > 0f }?.alpha = SuggestionSettings.overlayOpacity(this)
+        }
         val currentApp = SuggestionApp.fromPackage(currentPackage)
         if (key == SuggestionSettings.KEY_FUZZY_ENABLED ||
             (currentApp != null && !SuggestionSettings.isEnabled(this, currentApp))) hideStrip()
@@ -131,7 +142,15 @@ class QqSuggestionService : AccessibilityService() {
             }
             if (currentQuery == query && currentPackage == queryPackage &&
                 inputContextValid(queryPackage, query)) {
-                showSuggestions(queryPackage, query, suggestions)
+                val needed = suggestions.candidates.map { it.item.category }.toSet()
+                val icons = try {
+                    repository.categoryList.first().filter { it.name in needed }
+                        .associate { it.name to CategoryIcons.load(this@QqSuggestionService, it.iconFile) }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { emptyMap() }
+                if (currentQuery == query && currentPackage == queryPackage && inputContextValid(queryPackage, query)) {
+                    showSuggestions(queryPackage, query, suggestions, icons)
+                }
             }
         }
     }
@@ -173,7 +192,7 @@ class QqSuggestionService : AccessibilityService() {
             }
     }
 
-    private fun showSuggestions(packageName: String, query: String, result: SuggestionResult) {
+    private fun showSuggestions(packageName: String, query: String, result: SuggestionResult, icons: Map<String, Bitmap?>) {
         hideStripView()
         val suggestions = result.candidates
         if (suggestions.isEmpty()) return
@@ -209,7 +228,6 @@ class QqSuggestionService : AccessibilityService() {
             val end = minOf(full.length, start + 80)
             var contentOffset = 0
             val preview = buildString {
-                append("📋 ")
                 if (item.favorite) append("★ ")
                 if (start > 0) append("…")
                 contentOffset = length
@@ -234,16 +252,33 @@ class QqSuggestionService : AccessibilityService() {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 position = preview.indexOf(query, position + query.length, ignoreCase = true)
             }
-            rows.addView(TextView(this).apply {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), 0, dp(46), 0)
+                setOnClickListener { applySuggestion(packageName, query, item) }
+            }
+            row.addView(ImageView(this).apply {
+                val icon = icons[item.category]
+                if (icon != null) setImageBitmap(icon) else setImageResource(R.drawable.ic_sidebar_library)
+                contentDescription = item.category
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                outlineProvider = object : ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, dp(5).toFloat())
+                    }
+                }
+            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(8) })
+            row.addView(TextView(this).apply {
                 text = styled
                 textSize = 15f
                 setTextColor(textColor)
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), 0, dp(46), 0)
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setOnClickListener { applySuggestion(packageName, query, item) }
-            }, LinearLayout.LayoutParams(-1, rowHeight))
+            }, LinearLayout.LayoutParams(0, rowHeight, 1f))
+            rows.addView(row, LinearLayout.LayoutParams(-1, rowHeight))
         }
         panel.addView(ScrollView(this).apply {
             isVerticalScrollBarEnabled = true
@@ -336,7 +371,7 @@ class QqSuggestionService : AccessibilityService() {
         val ready = settled && params.y == nextY
         // Hide before changing geometry. A transparent panel must not intercept
         // touches intended for the chat or keyboard during navigation.
-        panel.alpha = if (ready) 1f else 0f
+        panel.alpha = if (ready) SuggestionSettings.overlayOpacity(this) else 0f
         val flags = if (ready) params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
             else params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         if (params.y == nextY && params.flags == flags) return ready

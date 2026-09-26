@@ -1,12 +1,12 @@
 # Smart Clipboard · 智能剪贴板助手
 
-一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及 QQ、小黑盒、bilibili 和抖音输入联想。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
+一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及 QQ、小黑盒、bilibili、抖音、JMComic2 和 JMComic3 输入联想。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
 
-**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.11-flat.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
+**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.10.0-categories.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
 
-> 当前版本：0.9.11。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+> 当前版本：0.10.0。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
 
-本次更新：移除列表卡片在静止、按压和拖动状态下的阴影，保留圆角与简洁的左滑操作按钮。包含导入时移除开头 @昵称的设置功能。
+本次更新：设置新增分类管理，支持自建分类、改名、删除、上传图片并裁剪为圆角方形图标；支持导入选分类及长按卡片批量改分类。悬浮候选左侧显示所属分类图标，不显示关键词标签。JMComic2、JMComic3 加入应用联想开关；保留悬浮窗透明度滑块和白底分组侧栏。
 
 ## ✨ 功能
 
@@ -19,9 +19,11 @@
 ### 🗂️ 个人资料库
 
 - **本地保存** — 使用 Room 数据库存储内容、时间、分类、标签、收藏状态和使用次数。
-- **自动分类** — 保存时识别网址、邮箱、中国大陆手机号；其他内容归入“文本”。
+- **自定义分类** — 在“设置 → 分类管理”新增分类、改名、更换图片图标或删除分类。自带分类也可以编辑，仅“未分类”固定保留。删除分类时将内容移至“未分类”，不会删除内容。
 - **搜索与筛选** — 按关键词查找内容；从屏幕左边缘右滑，打开分类和收藏筛选侧栏。
-- **快捷管理** — 点击卡片复制内容；卡片左滑可进行编辑、删除、收藏等操作。
+- **快捷管理** — 点击卡片复制内容；卡片左滑可进行编辑、删除、收藏等操作。长按进入多选，可全选当前列表、取消或统一修改分类。
+- **导入选分类** — 新内容不再自动分类；单条导入可选择分类，批量导入整批选择一个分类，默认归入“未分类”。旧内容保留原分类。
+- **分类图标** — 从手机选择图片，拖动或缩放调整正方形裁剪；图片复制到应用本地。侧栏与每条悬浮候选显示同一圆角图标，无图片时使用默认图标。
 
 ### 💬 跨应用输入联想
 
@@ -29,9 +31,9 @@
 - **滚动选择** — 在键盘上方显示浅色候选框，支持滚动浏览最多 20 条匹配结果；点击候选尝试填入当前输入框。
 - **模糊回退** — 没有普通候选且输入至少 4 个字时，尝试按原顺序跳字匹配，或容忍一处错字、漏字、多字；最多显示 5 条，实际匹配的字以蓝色加粗高亮。默认开启，可在设置里关闭；首页搜索规则不变。
 - **保守匹配** — 跳字匹配要求每段至少两个连续字符，最多两处间隔、共跳过不超过输入长度且至多 8 个字符。不混合跳段与错字纠正，不做同义词或语义搜索；相似程度优先于收藏和使用时间。
-- **独立开关** — 在应用“设置”中分别控制 QQ、小黑盒、bilibili 和抖音联想，并在 Android 系统设置中启用同一个 Smart Clipboard 无障碍服务。
-- **适用范围** — QQ（`com.tencent.mobileqq`）、小黑盒（`com.max.xiaoheihe`）、bilibili（`tv.danmaku.bili`）、抖音标准版（`com.ss.android.ugc.aweme`）。B站和抖音优先支持评论、私信，不刻意排除其他普通输入框。
-- **验证情况** — QQ、小黑盒已由用户确认可用；B站评论、私信已确认暴露可编辑节点和设置文本接口，新版联想完整流程及抖音输入场景仍待手机验证。不同页面、版本或输入法可能影响显示和插入。微信输入联想尚未实现。
+- **独立开关** — 在应用“设置”中分别控制 QQ、小黑盒、bilibili、抖音、JMComic2 和 JMComic3 联想，并在 Android 系统设置中启用同一个 Smart Clipboard 无障碍服务。
+- **适用范围** — QQ（`com.tencent.mobileqq`）、小黑盒（`com.max.xiaoheihe`）、bilibili（`tv.danmaku.bili`）、抖音标准版（`com.ss.android.ugc.aweme`）、JMComic2（`com.jiaohua_browser`）、JMComic3（`com.a7m3p9xv.t6qk2z8.app`）。B站和抖音优先支持评论、私信，不刻意排除其他普通输入框。
+- **验证情况** — QQ、小黑盒已由用户确认可用；B站评论、私信已确认暴露可编辑节点和设置文本接口，新版联想完整流程及抖音输入场景仍待手机验证。JM2、JM3 按用户提供 APK 的实际包名接入，具体输入框兼容性待实机验证。不同页面、版本或输入法可能影响显示和插入。微信输入联想尚未实现。
 
 ## 📱 安装与使用
 
@@ -55,3 +57,14 @@
 ```
 
 构建出的 APK 位于 `app/build/outputs/apk/debug/app-debug.apk`。项目使用 Gradle Kotlin DSL；本机 SDK 配置文件和 SDK 目录不会提交到仓库。
+
+## 数据升级与验证
+
+此版本将 Room 数据库从 v2 升级至 v3，新增分类表，原剪贴板记录及元数据保留。分类改名、删除和批量归类均在事务中执行。旧版本启动时的自动重分类任务已移除。
+
+```powershell
+node scripts/check-category-migration.cjs
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+```
+
+迁移检查使用合成数据和实际迁移 SQL，并与 Room 生成的 v3 表结构比对；不读取用户资料库。图片裁剪和新应用输入联想的实机交互仍需验证。
