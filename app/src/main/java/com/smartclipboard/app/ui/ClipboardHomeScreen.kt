@@ -289,7 +289,8 @@ fun ClipboardHomeScreen(viewModel: ClipboardViewModel) {
             }
         }
         if (status is ClipboardStatus.Candidate) {
-            SaveConfirmationDialog(status as ClipboardStatus.Candidate, categories, viewModel::save, viewModel::ignore)
+            SaveConfirmationDialog(status as ClipboardStatus.Candidate, categories,
+                viewModel.lastClipboardCategory(), viewModel::save, viewModel::ignore)
         }
         if (showManualEntry) {
             EntryEditorDialog(

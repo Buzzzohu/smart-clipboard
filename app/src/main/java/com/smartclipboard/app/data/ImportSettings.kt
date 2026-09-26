@@ -3,6 +3,14 @@ package com.smartclipboard.app.data
 import android.content.Context
 
 object ImportSettings {
+    /** Persist the ID rather than the name so category renames preserve the selection. */
+    fun lastClipboardCategory(context: Context): Long =
+        preferences(context).getLong("last_clipboard_category", 1L)
+
+    fun setLastClipboardCategory(context: Context, categoryId: Long) {
+        preferences(context).edit().putLong("last_clipboard_category", categoryId).apply()
+    }
+
     private fun preferences(context: Context) = context.getSharedPreferences("import_settings", Context.MODE_PRIVATE)
     fun stripSender(context: Context): Boolean = preferences(context).getBoolean("strip_sender", true)
     fun setStripSender(context: Context, enabled: Boolean) {

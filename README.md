@@ -2,17 +2,17 @@
 
 一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及自行添加应用的输入联想。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
 
-**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.10.5-service-status.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
+**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.10.6-remember-category.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
 
-> 当前版本：0.10.5。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+> 当前版本：0.10.6。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
 
-本次更新：修复无障碍已开启却提示未开启的状态误报，兼容完整和缩写服务名称，并在设置页可见时刷新状态。同时包含移除预置应用、仅保留自行添加，以及悬浮候选长按全文预览；预览可滚动，关闭后返回候选列表。
+本次更新：打开应用后的剪贴板保存弹窗会记住上次成功保存时选择的分类，重启后仍保留。分类改名不影响记忆；分类已删除则回到“未分类”。忽略、重复内容或保存失败不会更新记忆。
 
 ## ✨ 功能
 
 ### 📋 剪贴板收集
 
-- **打开即检查** — 进入应用时读取当前剪贴板；有符合规则的新文本时弹出保存确认框，可预览、展开、保存或忽略。
+- **打开即检查** — 进入应用时读取当前剪贴板；有符合规则的新文本时弹出保存确认框，可预览、展开、保存或忽略。保存弹窗记住上次成功保存时的分类，重启后仍保留；分类被删除时回到“未分类”。
 - **安静去重** — 空内容、已保存内容，以及仅由英文字母和数字组成的文本不会触发自动保存提示。
 - **手动导入** — 可以单条添加，也可以粘贴多行批量导入；批量导入按一行一条处理并跳过空行和重复内容。
 

@@ -122,6 +122,8 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         updateStatus(ClipboardStatus.IgnoredByUser(candidate.content), R.string.clipboard_ignored_by_user)
     }
 
+    fun lastClipboardCategory(): Long = ImportSettings.lastClipboardCategory(getApplication())
+
     fun save(categoryId: Long = 1) {
         val candidate = mutableState.value as? ClipboardStatus.Candidate ?: return
         if (candidate.isSaving) return
@@ -131,6 +133,8 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val inserted = repository.save(content, categoryId = categoryId)
+                // Ignoring, failed saves and duplicate content must not change the remembered choice.
+                if (inserted) ImportSettings.setLastClipboardCategory(getApplication(), categoryId)
                 lastHandledContent = content
                 if (version == readVersion) {
                     if (inserted) updateStatus(ClipboardStatus.Saved(content), R.string.clipboard_saved)

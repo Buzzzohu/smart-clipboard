@@ -25,17 +25,20 @@ import com.smartclipboard.app.data.LibraryCategory
 fun SaveConfirmationDialog(
     candidate: ClipboardStatus.Candidate,
     categories: List<LibraryCategory>,
+    initialCategoryId: Long,
     onSave: (Long) -> Unit,
     onIgnore: () -> Unit
 ) {
     var expanded by rememberSaveable(candidate.content) { mutableStateOf(false) }
-    var categoryId by rememberSaveable(candidate.content) { mutableStateOf(1L) }
+    var categoryId by rememberSaveable(candidate.content) { mutableStateOf(initialCategoryId) }
+    // Resolve only for display/save: the category list loads asynchronously on first opening.
+    val selectedCategoryId = categoryId.takeIf { id -> categories.any { it.id == id } } ?: 1L
     AlertDialog(
         onDismissRequest = { if (!candidate.isSaving) onIgnore() },
         title = { Text(stringResource(R.string.save_dialog_title)) },
         text = {
             Column(modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState())) {
-                CategoryPicker(categories, categoryId, enabled = !candidate.isSaving) { categoryId = it }
+                CategoryPicker(categories, selectedCategoryId, enabled = !candidate.isSaving && categories.isNotEmpty()) { categoryId = it }
                 Text(
                     text = candidate.content,
                     maxLines = if (expanded) Int.MAX_VALUE else 5,
@@ -49,7 +52,7 @@ fun SaveConfirmationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(categoryId) }, enabled = !candidate.isSaving) {
+            TextButton(onClick = { onSave(selectedCategoryId) }, enabled = !candidate.isSaving && categories.isNotEmpty()) {
                 Text(stringResource(R.string.save_to_library))
             }
         },
