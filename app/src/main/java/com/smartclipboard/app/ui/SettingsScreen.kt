@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.smartclipboard.app.R
+import com.smartclipboard.app.data.ImportSettings
 import com.smartclipboard.app.suggestion.SuggestionApp
 import com.smartclipboard.app.suggestion.SuggestionSettings
 
@@ -61,6 +62,7 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
     }
     var connected by remember { mutableStateOf(SuggestionSettings.isServiceConnected(context)) }
     var fuzzyEnabled by remember { mutableStateOf(SuggestionSettings.isFuzzyEnabled(context)) }
+    var stripSender by remember { mutableStateOf(ImportSettings.stripSender(context)) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -114,6 +116,22 @@ private fun SettingsPage(appsPage: Boolean, onBack: () -> Unit, onOpenApps: () -
                     Spacer(Modifier.height(12.dp))
                 }
             } else {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.strip_sender_title), Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleMedium)
+                            Switch(checked = stripSender, onCheckedChange = {
+                                stripSender = it
+                                ImportSettings.setStripSender(context, it)
+                            })
+                        }
+                        Text(stringResource(R.string.strip_sender_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Card(onClick = onOpenApps, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {

@@ -31,8 +31,8 @@ class ClipboardRepository(private val dao: ClipboardItemDao) {
     }
 
     /** Explicit paste bypasses automatic-import filtering; the unique index handles stored repeats. */
-    suspend fun importBatch(raw: String): BatchImportResult {
-        val parsed = BatchImportParser.parse(raw)
+    suspend fun importBatch(raw: String, stripSender: Boolean = false): BatchImportResult {
+        val parsed = BatchImportParser.parse(raw, stripSender)
         if (parsed.entries.isEmpty()) return BatchImportResult(0, parsed.skipped)
         val now = System.currentTimeMillis()
         val items = parsed.entries.mapIndexed { index, content ->

@@ -11,6 +11,8 @@ import com.smartclipboard.app.R
 import com.smartclipboard.app.data.ClipboardDatabase
 import com.smartclipboard.app.data.ClipboardItem
 import com.smartclipboard.app.data.ClipboardRepository
+import com.smartclipboard.app.data.ImportSettings
+import com.smartclipboard.app.data.ImportTextCleaner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +64,8 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun refresh(passive: Boolean = false) {
         if ((mutableState.value as? ClipboardStatus.Candidate)?.isSaving == true) return
         val version = ++readVersion
-        when (val result = ClipboardImportPolicy.evaluate(reader.read())) {
+        val prepared = reader.read()?.let { ImportTextCleaner.clean(it, ImportSettings.stripSender(getApplication())) }
+        when (val result = ClipboardImportPolicy.evaluate(prepared)) {
             // An empty clipboard is normal on app launch; keep the library quiet.
             ClipboardImportResult.Empty -> mutableState.value = ClipboardStatus.Empty
             ClipboardImportResult.Ignored -> {
@@ -133,9 +136,10 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     /** Manual entry intentionally bypasses the automatic letters/digits filter. */
     fun addManual(content: String, tags: String) {
+        val prepared = ImportTextCleaner.clean(content, ImportSettings.stripSender(getApplication()))
         viewModelScope.launch {
             val message = try {
-                if (repository.save(content, tags)) LibraryMessage.Saved
+                if (repository.save(prepared, tags)) LibraryMessage.Saved
                 else LibraryMessage.Duplicate
             } catch (_: Exception) {
                 LibraryMessage.Failed
@@ -145,9 +149,10 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun importBatch(raw: String) {
+        val stripSender = ImportSettings.stripSender(getApplication())
         viewModelScope.launch {
             val message = try {
-                val result = repository.importBatch(raw)
+                val result = repository.importBatch(raw, stripSender)
                 LibraryMessage.BatchImported(result.added, result.skipped)
             } catch (_: Exception) {
                 LibraryMessage.Failed

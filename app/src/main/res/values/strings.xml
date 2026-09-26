@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="strip_sender_title">移除开头的 @昵称</string>
+    <string name="strip_sender_description">导入时去掉开头的“@昵称: ”或“@昵称：”，批量导入逐行处理。默认开启，仅影响新导入内容。</string>
     <string name="app_suggestions_menu">应用联想</string>
     <string name="app_suggestions_menu_description">管理 QQ、小黑盒、bilibili 和抖音的联想开关</string>
     <string name="app_name">Smart Clipboard</string>
