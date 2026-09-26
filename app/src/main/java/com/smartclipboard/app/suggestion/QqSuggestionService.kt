@@ -41,6 +41,7 @@ class QqSuggestionService : AccessibilityService() {
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var queryJob: Job? = null
     private var strip: FrameLayout? = null
+    private var positionJob: Job? = null
     private var currentQuery = ""
     private var currentPackage: String? = null
     private var dismissedSuggestion: Pair<String, String>? = null
@@ -85,6 +86,7 @@ class QqSuggestionService : AccessibilityService() {
         when (action) {
             SuggestionEventPolicy.Action.HIDE -> { hideStrip(); return }
             SuggestionEventPolicy.Action.IGNORE -> return
+            SuggestionEventPolicy.Action.REPOSITION -> { refreshStripPosition(); return }
             SuggestionEventPolicy.Action.QUERY -> Unit
         }
         val queryPackage = activePackage ?: return
@@ -162,7 +164,7 @@ class QqSuggestionService : AccessibilityService() {
         if (ime == null) return
         val bounds = Rect().also(ime::getBoundsInScreen)
         val rowHeight = dp(44)
-        val headerHeight = if (result.isFuzzy) dp(26) else 0
+        val headerHeight = if (result.isFuzzy) dp(30) else 0
         val height = minOf(suggestions.size, 3) * rowHeight + dp(8) + headerHeight
         if (bounds.top <= height + dp(8)) return
         val backgroundColor = 0xFFF7F8FC.toInt()
@@ -227,7 +229,7 @@ class QqSuggestionService : AccessibilityService() {
                 textSize = 12f
                 setTextColor(accentColor)
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), 0, dp(46), 0)
+                setPadding(dp(16), dp(4), dp(46), 0)
             }, FrameLayout.LayoutParams(-1, headerHeight, Gravity.TOP))
         }
         panel.addView(TextView(this).apply {
@@ -256,7 +258,43 @@ class QqSuggestionService : AccessibilityService() {
         runCatching {
             windowManager.addView(panel, params)
             strip = panel
+            // Some IMEs coalesce window events during their opening animation. Keep
+            // following their bounds while visible, without recreating the scroll list.
+            positionJob = scope.launch {
+                while (strip === panel) {
+                    delay(80)
+                    if (!inputContextValid(packageName, query)) {
+                        hideStrip()
+                        return@launch
+                    }
+                    refreshStripPosition()
+                }
+            }
         }
+    }
+
+    private fun refreshStripPosition() {
+        val panel = strip ?: return
+        val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            ?: run { hideStrip(); return }
+        val bounds = Rect().also(ime::getBoundsInScreen)
+        val params = panel.layoutParams as? WindowManager.LayoutParams ?: return
+        if (bounds.isEmpty || bounds.top <= params.height + dp(8)) {
+            hideStrip()
+            return
+        }
+        if (!panel.isLaidOut) return
+        val location = IntArray(2)
+        panel.getLocationOnScreen(location)
+        // IME bounds use screen coordinates; the overlay's layout origin can have
+        // system-bar insets. Correct from its actual screen location, not a guessed inset.
+        val nextY = SuggestionPosition.layoutY(
+            params.y, location[1], bounds.top, params.height, dp(6)
+        )
+        if (params.y == nextY) return
+        params.y = nextY
+        runCatching { windowManager.updateViewLayout(panel, params) }
+            .onFailure { hideStrip() }
     }
 
     private fun applySuggestion(packageName: String, query: String, item: ClipboardItem) {
@@ -284,6 +322,8 @@ class QqSuggestionService : AccessibilityService() {
     }
 
     private fun hideStripView() {
+        positionJob?.cancel()
+        positionJob = null
         strip?.let { runCatching { windowManager.removeView(it) } }
         strip = null
     }

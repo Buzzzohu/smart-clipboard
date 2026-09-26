@@ -2,9 +2,11 @@
 
 一款 Android 本地剪贴板管理工具。打开应用时读取当前剪贴板，将需要的内容保存到个人资料库；支持搜索、分类、批量导入，以及 QQ、小黑盒、bilibili 和抖音输入联想。使用 Kotlin、Jetpack Compose、MVVM 与 Room 开发。
 
-**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.2-fuzzy.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
+**[下载最新版 APK](https://github.com/Buzzzohu/smart-clipboard/releases/latest/download/Smart-Clipboard-0.9.3-position.apk)** · [查看版本发布页](https://github.com/Buzzzohu/smart-clipboard/releases)
 
-> 当前版本：0.9.2。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+> 当前版本：0.9.3。仓库目前为私有仓库，下载 Release 需要登录有访问权限的 GitHub 账号。
+
+本次更新：候选框在键盘弹起或尺寸变化时持续更新位置，修复重新进入聊天后停留在屏幕底部的问题；“相似匹配”标题增加顶部留白。定位逻辑已通过回归测试，实际手机效果待验证。
 
 ## ✨ 功能
 
