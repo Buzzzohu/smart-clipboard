@@ -260,7 +260,19 @@ class QqSuggestionService : AccessibilityService() {
             gravity = Gravity.TOP
             y = keyboardAnchor(ime, bounds) - height
             x = 0
+            windowAnimations = 0
         }
+        // Screen coordinates and window coordinates have different origins on
+        // some phones. Suppress the first draw until the measured position is
+        // corrected; otherwise users see the wrong position for one polling cycle.
+        panel.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (strip !== panel) return true
+                if (!refreshStripPosition()) return false
+                panel.viewTreeObserver.removeOnPreDrawListener(this)
+                return true
+            }
+        })
         runCatching {
             windowManager.addView(panel, params)
             strip = panel
@@ -286,17 +298,17 @@ class QqSuggestionService : AccessibilityService() {
         }
     }
 
-    private fun refreshStripPosition() {
-        val panel = strip ?: return
+    private fun refreshStripPosition(): Boolean {
+        val panel = strip ?: return false
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-            ?: run { hideStrip(); return }
+            ?: run { hideStrip(); return false }
         val bounds = Rect().also(ime::getBoundsInScreen)
-        val params = panel.layoutParams as? WindowManager.LayoutParams ?: return
+        val params = panel.layoutParams as? WindowManager.LayoutParams ?: return false
         if (bounds.isEmpty || bounds.top <= params.height + dp(8)) {
             hideStrip()
-            return
+            return false
         }
-        if (!panel.isLaidOut) return
+        if (!panel.isLaidOut) return false
         val location = IntArray(2)
         panel.getLocationOnScreen(location)
         // IME bounds use screen coordinates; the overlay's layout origin can have
@@ -304,10 +316,11 @@ class QqSuggestionService : AccessibilityService() {
         val nextY = SuggestionPosition.layoutY(
             params.y, location[1], keyboardAnchor(ime, bounds), params.height, 0
         )
-        if (params.y == nextY) return
+        if (params.y == nextY) return true
         params.y = nextY
         runCatching { windowManager.updateViewLayout(panel, params) }
             .onFailure { hideStrip() }
+        return false
     }
 
     private fun keyboardAnchor(ime: AccessibilityWindowInfo, bounds: Rect): Int {

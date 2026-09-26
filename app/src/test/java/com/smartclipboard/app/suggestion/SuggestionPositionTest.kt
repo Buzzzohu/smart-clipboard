@@ -5,6 +5,14 @@ import org.junit.Test
 
 class SuggestionPositionTest {
     @Test
+    fun firstLayoutCorrectsMeasuredPhoneOffsetBeforeBeingShown() {
+        // Toolbar top 1482, panel height 420, window origin 120.
+        val corrected = SuggestionPosition.layoutY(1062, 1182, 1482, 420, 0)
+        assertEquals(942, corrected)
+        assertEquals(corrected, SuggestionPosition.layoutY(corrected, 1062, 1482, 420, 0))
+    }
+
+    @Test
     fun reopeningKeyboardMovesExistingPanelUpAndKeepsGap() {
         var layoutY = 1900
         // Replay the keyboard opening; include a 24px system-bar offset.
