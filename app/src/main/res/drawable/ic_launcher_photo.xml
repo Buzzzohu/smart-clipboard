@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep the supplied photo within the adaptive icon's visible viewport. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="16.6667%">
+    <bitmap android:src="@drawable/launcher_photo" android:gravity="fill" android:filter="true" />
+</inset>
